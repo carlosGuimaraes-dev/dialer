@@ -28,11 +28,13 @@ router.post("/", async (req: AuthRequest, res) => {
       fields: results.fields,
     });
   } catch (err: any) {
-    log.error("Setup failed:", err.message);
-    res.status(500).json({
+    const detail = String(err?.message || err);
+    const timedOut = /abort|timed out|timeout/i.test(detail);
+    log.error("Setup failed:", detail.slice(0, 300));
+    res.status(timedOut ? 502 : 500).json({
       success: false,
       error: "Setup failed",
-      details: err.message,
+      details: detail.slice(0, 300),
     });
   }
 });

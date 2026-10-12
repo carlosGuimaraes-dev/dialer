@@ -5,6 +5,13 @@ import type { Database } from "@/domains/api/database";
 
 type Lead = Database["public"]["Tables"]["leads"]["Row"];
 
+/**
+ * The single cache key for one lead's record. The layout breadcrumb, the
+ * contact page and the dock panel all read the same entry, so one fetch
+ * serves all three instead of each keying its own duplicate request.
+ */
+export const leadDetailKey = (leadId: string) => ["leads", leadId] as const;
+
 export function useLeads() {
   return useQuery<Lead[]>({
     queryKey: ["leads"],
@@ -17,7 +24,7 @@ export function useLeads() {
 
 export function useLead(leadId: string) {
   return useQuery<Lead>({
-    queryKey: ["leads", leadId],
+    queryKey: leadDetailKey(leadId),
     queryFn: async () => {
       return api.leads.get(leadId);
     },
@@ -43,7 +50,7 @@ export function useCreateLead() {
 /** Instant edits: the row changes in the table and detail page before the save finishes. */
 export function useUpdateLead() {
   const mutation = useOptimisticUpdate<Lead>(
-    { listKey: ["contacts-page"], detailKey: (id) => ["leads", id] },
+    { listKey: ["contacts-page"], detailKey: (id) => leadDetailKey(id) },
     (id, patch) => api.leads.update(id, patch),
   );
   return {

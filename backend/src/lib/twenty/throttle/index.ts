@@ -58,7 +58,10 @@ const inFlight = new Map<string, Promise<Response>>();
 async function send(url: string, init?: RequestInit): Promise<Response> {
   for (let attempt = 0; ; attempt++) {
     await slot();
-    const res = await fetch(url, init);
+    // Fail fast instead of hanging past proxy read timeouts (a 60s nginx
+    // default turns a stalled upstream into a mystery 504). The pacing
+    // budget above is unaffected: a timed-out slot is simply spent.
+    const res = await fetch(url, { ...init, signal: AbortSignal.timeout(30000) });
     if (res.status !== 429 || attempt >= RETRIES) return res;
     const pause = 2000 * (attempt + 1);
     log.info(`Twenty answered 429; retrying in ${pause}ms (${attempt + 1}/${RETRIES})`);

@@ -7,6 +7,7 @@ import { buttonClass } from "@/domains/ui/button";
 import { Chip } from "@/domains/ui/chip";
 import { LABEL, LINK } from "@/domains/ui/tokens";
 import { toContact, initials, type Contact } from "@/domains/contact/model";
+import { leadDetailKey } from "@/domains/contact/data";
 import { usePeople } from "@/domains/contact/people";
 import { parseNotes } from "@/domains/contact/notes";
 import { useCallsForRecord } from "@/domains/calls/data";
@@ -99,7 +100,7 @@ function PanelSkeleton() {
 export function DockContactPanel({ contactType, contactId, onClose }: { contactType: "prospect" | "lead"; contactId: string; onClose: () => void }) {
   const navigate = useNavigate();
   const { data: raw, isLoading } = useQuery<any>({
-    queryKey: contactType === "lead" ? ["leads", contactId] : ["prospect", contactId],
+    queryKey: contactType === "lead" ? leadDetailKey(contactId) : ["prospect", contactId],
     queryFn: () => (contactType === "lead" ? api.leads.get(contactId) : api.prospects.get(contactId)),
     staleTime: 30_000,
   });

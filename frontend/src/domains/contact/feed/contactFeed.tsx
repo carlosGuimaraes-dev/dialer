@@ -33,6 +33,8 @@ import { dispositionTypeOfStatus } from "@/domains/calls/disposition";
 import type { HistoryRow } from "@/domains/activity/historyFormat";
 import { HistorySentence, rowIcon } from "@/domains/contact/history";
 import { useRecordHistory } from "@/domains/contact/history";
+import { resolveFeedBodyState } from "./feedState";
+import { Skeleton } from "@/domains/ui/skeleton";
 import type { Contact } from "@/domains/contact/model";
 import { initials } from "@/domains/contact/model";
 import { useContactTexts, useSendText } from "@/domains/messaging/thread";
@@ -83,8 +85,8 @@ export function ContactFeed({
   const [filter, setFilter] = usePersistedState<FeedFilter>("contact-feed-filter", "all");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { rows: history } = useRecordHistory(contact);
-  const { data: thread } = useContactTexts(contact);
+  const { rows: history, isLoading: historyLoading, error: historyError } = useRecordHistory(contact);
+  const { data: thread, isLoading: textsLoading, error: textsError } = useContactTexts(contact);
 
   const items = useMemo<FeedItem[]>(() => {
     const out: FeedItem[] = [];
@@ -106,6 +108,18 @@ export function ContactFeed({
   }, [calls, contact, history, thread]);
 
   const shown = items.filter((i) => filter === "all" || (filter === "calls" && i.kind === "call") || (filter === "texts" && i.kind === "text") || (filter === "notes" && i.kind === "note") || (filter === "updates" && i.kind === "event"));
+  // Texts and history arrive after the record: while either is on its first
+  // load the body shows skeleton rows, never the empty state, so items do
+  // not pop in over a "Nothing here yet" flash. A failed source says so
+  // instead of looking empty.
+  const bodyState = resolveFeedBodyState({
+    textsLoading,
+    historyLoading,
+    textsError,
+    historyError,
+    itemCount: shown.length,
+  });
+  const feedError = bodyState === "error" ? (textsError as Error | null) ?? (historyError as Error | null) : null;
 
   // Land on the newest item, and follow new items as they arrive.
   useLayoutEffect(() => {
@@ -177,13 +191,26 @@ export function ContactFeed({
         </div>
       )}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3 bg-[var(--ods-bg-secondary)]">
-        {shown.length === 0 && (
+        {bodyState === "loading" && (
+          <div className="space-y-3" aria-label="Loading activity">
+            <Skeleton className="h-14 rounded-[12px]" />
+            <Skeleton className="h-14 rounded-[12px]" />
+            <Skeleton className="h-14 rounded-[12px]" />
+          </div>
+        )}
+        {bodyState === "error" && (
+          <div className="h-full flex flex-col items-center justify-center text-center gap-2">
+            <p className="text-[13px] text-red-600">Activity could not be loaded{feedError?.message ? `: ${feedError.message}` : ""}</p>
+          </div>
+        )}
+        {bodyState === "empty" && (
           <div className="h-full flex flex-col items-center justify-center text-center gap-2 text-[var(--ods-text-tertiary)]">
             <CalendarDays className="w-6 h-6" />
             <p className="text-[13px]">{filter === "all" ? "Nothing here yet. Calls, texts, notes and changes show up as they happen." : "Nothing of this kind yet."}</p>
           </div>
         )}
-        {shown.map((item, i) => {
+        {bodyState === "content" &&
+          shown.map((item, i) => {
           const day = item.at ? dayLabel(item.at) : "Earlier notes";
           const separator = day !== lastDay;
           lastDay = day;

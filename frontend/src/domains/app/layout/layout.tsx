@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/domains/auth/provider';
 import { signOut } from '@/domains/auth/session';
 import { api } from '@/domains/api/client';
+import { leadDetailKey } from '@/domains/contact/data';
 import { Skeleton } from '@/domains/ui/skeleton';
 import { usePersistedState } from '@/domains/app/persistedState';
 import { PowerDialerProvider } from '@/domains/campaigns/powerDialer';
@@ -127,9 +128,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
     return match ? match[1] : null;
   }, [location.pathname]);
 
-  // Fetch lead name
+  // Fetch lead name (same cache entry as the contact page and dock panel).
   const { data: lead } = useQuery({
-    queryKey: ['lead', leadId],
+    queryKey: leadDetailKey(leadId ?? ''),
     queryFn: () => api.leads.get(leadId ?? ''),
     enabled: !!leadId,
     staleTime: Infinity,

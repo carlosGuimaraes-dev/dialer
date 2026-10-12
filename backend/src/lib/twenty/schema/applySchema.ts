@@ -43,6 +43,7 @@ export const metadataRequest: MetadataRequest = async <T>(query: string, variabl
     method: "POST",
     headers: { Authorization: `Bearer ${cfg.twentyApiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(30000),
   });
   if (!response.ok) {
     const text = await response.text();

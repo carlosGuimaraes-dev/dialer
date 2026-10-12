@@ -13,6 +13,7 @@ import { useExperimental } from "@/domains/app/experimental";
 import { useCallsForRecord } from "@/domains/calls/data";
 import { api } from "@/domains/api/client";
 import { useUpdateContact, type ContactType } from "@/domains/contact/list";
+import { leadDetailKey } from "@/domains/contact/data";
 import { appendNote } from "@/domains/contact/notes";
 import { toContact } from "@/domains/contact/model";
 import { ContactSidebar } from "@/domains/contact/sidebar";
@@ -38,7 +39,7 @@ export function ContactPage({ type }: { type: ContactType }) {
   const update = useUpdateContact(type);
 
   const { data: raw, isLoading } = useQuery<any>({
-    queryKey: type === "lead" ? ["leads", id] : ["prospect", id],
+    queryKey: type === "lead" ? leadDetailKey(id) : ["prospect", id],
     queryFn: () => (type === "lead" ? api.leads.get(id) : api.prospects.get(id)),
     enabled: !!id,
     staleTime: 0,

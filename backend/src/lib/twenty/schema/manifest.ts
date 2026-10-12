@@ -451,6 +451,9 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
       { name: "latestPreview", type: "TEXT", label: "Latest Preview" },
       { name: "latestDirection", type: "TEXT", label: "Latest Direction" },
       { name: "messageCount", type: "NUMBER", label: "Message Count" },
+      { name: "blasterConversationId", type: "TEXT", label: "Blaster Conversation ID", description: "Blaster/Convex thread id when the thread is mirrored there; opaque, never parsed" },
+      { name: "status", type: "TEXT", label: "Status", description: "Dialer-owned CRM/display state (OPEN/ACTIVE/OPTED_OUT/CLOSED). Blaster suppressions remain the opt-out source of truth; never gates sending" },
+      { name: "createdByMemberId", type: "TEXT", label: "Created By Member ID" },
     ],
   },
 ];
@@ -543,6 +546,44 @@ export const SCHEMA_RELATIONS: SchemaRelation[] = [
     targetFieldName: "calls",
     targetFieldLabel: "Calls",
     targetFieldIcon: "IconPhoneCall",
+    onDelete: "SET_NULL",
+  },
+  // One conversation row stays attached across prospect -> lead promotion:
+  // both person links are nullable, so a prospect-born row later gains
+  // agencyLeadId while keeping agencyProspectId. Reverse fields are named
+  // "conversations" (never "Name", which would collide with each target's
+  // own name field).
+  {
+    object: "agencyConversation",
+    name: "agencyProspect",
+    label: "Prospect",
+    icon: "IconMessages",
+    target: "agencyProspect",
+    targetFieldName: "conversations",
+    targetFieldLabel: "Conversations",
+    targetFieldIcon: "IconMessages",
+    onDelete: "SET_NULL",
+  },
+  {
+    object: "agencyConversation",
+    name: "agencyPhone",
+    label: "Phone",
+    icon: "IconMessages",
+    target: "agencyPhone",
+    targetFieldName: "conversations",
+    targetFieldLabel: "Conversations",
+    targetFieldIcon: "IconMessages",
+    onDelete: "SET_NULL",
+  },
+  {
+    object: "agencyConversation",
+    name: "agencyLead",
+    label: "Lead",
+    icon: "IconMessages",
+    target: "agencyLead",
+    targetFieldName: "conversations",
+    targetFieldLabel: "Conversations",
+    targetFieldIcon: "IconMessages",
     onDelete: "SET_NULL",
   },
   {
