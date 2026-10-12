@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   uses in a Twenty workspace, from one manifest; `twenty:schema:check` dry run
 - `bun run twenty:seed`: the demo workspace (fictional, refuses real workspaces)
 - `bun run screenshots`: every page and tab captured from the demo workspace
+- Dock music player: search SoundCloud, queue songs, a live waveform; music
+  keeps playing while a call dials and rings, pauses when the person answers
+  and comes back when the call ends (`RAPID_API_KEY`, soundcloud-api3)
+- Settings > Experimental: per-browser switches, off by default, for the dock
+  music player and the Website and video panel on a prospect's page
 - `./scripts/setup.sh`: install, env files, schema check, `--apply`, `--seed`
 - AST commit checks (naming, layout, dead buttons, toggle state, pipeline
   values), Conventional Commits, branch names, and a full pre-push gate

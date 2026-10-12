@@ -259,6 +259,14 @@ export const api = {
       request<import("@/domains/admin/data").AdminActivityResponse>(`/api/admin/activity?contact=${encodeURIComponent(`${type}:${id}`)}`),
   },
 
+  music: {
+    /** SoundCloud tracks for the dock's music player. */
+    search: (q: string) => request<{ tracks: import("@/domains/music/player").MusicTrack[] }>(`/api/music/search?q=${encodeURIComponent(q)}`),
+    /** A short-lived playable URL for a track's stream. */
+    stream: (streamId: string, auth: string | null) =>
+      request<{ url: string; hls: boolean }>(`/api/music/stream?streamId=${encodeURIComponent(streamId)}${auth ? `&auth=${encodeURIComponent(auth)}` : ""}`),
+  },
+
   twentyPhones: {
     list: () => request<any[]>("/api/twenty/phones"),
     primary: () => request<{ phone: any; isPrimary: boolean; total: number }>("/api/twenty/phones/primary"),

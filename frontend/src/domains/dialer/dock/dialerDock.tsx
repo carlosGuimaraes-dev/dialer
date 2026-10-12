@@ -17,6 +17,7 @@ import {
   ListFilter,
   Mic,
   MicOff,
+  Music,
   Pause,
   Phone,
   PhoneIncoming,
@@ -36,6 +37,8 @@ import {
 import { Chip } from "@/domains/ui/chip";
 import { SelectMenu } from "@/domains/ui/menu";
 import { TabBar } from "@/domains/ui/tabBar";
+import { MusicTab, NowPlaying } from "@/domains/music/dock";
+import { useExperimental } from "@/domains/app/experimental";
 import { CountryFlag } from "@/domains/country/badge";
 import { DispositionBadge, DispositionIcon } from "@/domains/calls/disposition";
 import { AudioSourceSettings } from "@/domains/dialer/audio";
@@ -206,6 +209,8 @@ export function DialerDock() {
       />
       {dialer.incoming && <IncomingBanner />}
       <div className="flex-1 min-h-0 flex flex-col">{body}</div>
+      {/* The idle view places its own player above the tab bar; on a call it sits at the bottom. */}
+      {!settingsOpen && state !== "idle" && <NowPlaying compact />}
     </div>
     </SideContext.Provider>
   );
@@ -299,17 +304,20 @@ function IncomingBanner() {
 
 // ---------------------------------------------------------------- idle
 
-type IdleTab = "recents" | "contacts" | "keypad" | "queue";
+type IdleTab = "recents" | "contacts" | "keypad" | "music" | "queue";
 
 function IdleView() {
   const { cooldownNotice, dialAnyway, discardSummary, target } = useDialer();
   const { queue } = usePowerDialer();
   const [tab, setTab] = usePersistedState<IdleTab>("dialer-tab", "recents");
-  const shown = queue ? tab : tab === "queue" ? "recents" : tab;
+  // The music player is experimental (Settings > Experimental).
+  const [music] = useExperimental("musicPlayer");
+  const shown = (tab === "queue" && !queue) || (tab === "music" && !music) ? "recents" : tab;
   const tabs = [
     { key: "recents" as const, label: "Recents", icon: Clock },
     { key: "contacts" as const, label: "Contacts", icon: Users },
     { key: "keypad" as const, label: "Keypad", icon: Keyboard },
+    ...(music ? [{ key: "music" as const, label: "Music", icon: Music }] : []),
     ...(queue ? [{ key: "queue" as const, label: "Queue", icon: SkipForward, badge: `${queue.position}/${queue.total}` }] : []),
   ];
   return (
@@ -332,8 +340,10 @@ function IdleView() {
         {shown === "recents" && <RecentsTab />}
         {shown === "contacts" && <ContactsTab />}
         {shown === "keypad" && <KeypadTab />}
+        {shown === "music" && <MusicTab />}
         {shown === "queue" && <QueueTab />}
       </div>
+      {shown !== "music" && <NowPlaying compact />}
       <div className="p-2 border-t border-[var(--ods-border)] shrink-0">
         <TabBar tabs={tabs} value={shown} onChange={setTab} />
       </div>

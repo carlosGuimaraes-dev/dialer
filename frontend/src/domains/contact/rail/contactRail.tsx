@@ -10,22 +10,25 @@ import { dispositionTypeOfStatus, callStatusLabel } from "@/domains/calls/dispos
 import { timeAgo } from "@/domains/admin/data";
 import type { Contact } from "@/domains/contact/model";
 import { RecordHistory } from "@/domains/contact/history";
+import { useExperimental } from "@/domains/app/experimental";
 
 export type RailTab = "summary" | "activity" | "script" | "notes" | "website";
 
-const TABS: { key: RailTab; label: string; icon: IconComponent; prospectOnly?: boolean }[] = [
+const TABS: { key: RailTab; label: string; icon: IconComponent; prospectOnly?: boolean; experimental?: boolean }[] = [
   { key: "summary", label: "Call summary", icon: BarChart3 },
   { key: "activity", label: "Record history", icon: Activity },
   { key: "script", label: "Call script", icon: BookOpen },
   { key: "notes", label: "Notes", icon: FileText },
-  { key: "website", label: "Website and video", icon: Globe, prospectOnly: true },
+  // Experimental: only with Settings > Experimental > Website preview on.
+  { key: "website", label: "Website and video", icon: Globe, prospectOnly: true, experimental: true },
 ];
 
 /** The thin icon column at the far right. Clicking the open tab closes its panel. */
 export function RailIcons({ contact, open, onOpen }: { contact: Contact; open: RailTab | null; onOpen: (t: RailTab | null) => void }) {
+  const [websitePreview] = useExperimental("websitePreview");
   return (
     <nav aria-label="Contact panels" className="w-12 shrink-0 border-l border-[var(--ods-border)] bg-[var(--ods-bg-primary)] flex flex-col items-center gap-1 py-2">
-      {TABS.filter((t) => !t.prospectOnly || contact.type === "prospect").map(({ key, label, icon: Icon }) => (
+      {TABS.filter((t) => (!t.prospectOnly || contact.type === "prospect") && (!t.experimental || websitePreview)).map(({ key, label, icon: Icon }) => (
         <button
           key={key}
           onClick={() => onOpen(open === key ? null : key)}
@@ -57,6 +60,7 @@ export function RailPanel({
   onClose: () => void;
   onSaveNotes: (notes: string) => Promise<boolean>;
 }) {
+  const [websitePreview] = useExperimental("websitePreview");
   const title = TABS.find((t) => t.key === tab)?.label ?? "";
   return (
     <div className="flex flex-col min-h-0 h-full">
@@ -76,7 +80,7 @@ export function RailPanel({
             <Empty text="This contact is not in a campaign, so there is no call script." />
           ))}
         {tab === "notes" && <NotesPanel key={contact.id} notes={contact.notes ?? ""} onSave={onSaveNotes} />}
-        {tab === "website" && contact.type === "prospect" && (
+        {tab === "website" && contact.type === "prospect" && websitePreview && (
           <WebsitePanel prospectId={contact.id} prospectPhone={contact.phone} prospectCountry={contact.country} />
         )}
       </div>

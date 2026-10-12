@@ -1,12 +1,13 @@
 import React, { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { BarChart3, Check, Clock, Headphones, LogOut, Monitor, Moon, Palette, PhoneOutgoing, Sun, Timer, User, type IconComponent } from "@/domains/ui/icons";
+import { BarChart3, Check, Clock, FlaskConical, Headphones, LogOut, Monitor, Moon, Palette, PhoneOutgoing, Sun, Timer, User, type IconComponent } from "@/domains/ui/icons";
 import { InfoTip, TipCard, type TipSpec } from "@/domains/ui/infoTip";
 import { AudioSourceSettings } from "@/domains/dialer/audio";
 import { SectionTitle } from "@/domains/ui/sectionTitle";
 import { TabBar, type TabDef } from "@/domains/ui/tabBar";
 import { ReportCard } from "@/domains/reports/parts";
 import { usePersistedState } from "@/domains/app/persistedState";
+import { EXPERIMENTAL_FEATURES, useExperimental, type ExperimentalFeature } from "@/domains/app/experimental";
 import { useEvenColumns } from "@/domains/app/evenColumns";
 import { useAuth } from "@/domains/auth/provider";
 import { signOut } from "@/domains/auth/session";
@@ -132,11 +133,12 @@ function ThemePreview({ dark }: { dark: boolean }) {
   );
 }
 
-type SettingsTab = "appearance" | "audio" | "reports" | "account";
+type SettingsTab = "appearance" | "audio" | "reports" | "experimental" | "account";
 const SETTINGS_TABS: TabDef<SettingsTab>[] = [
   { key: "appearance", label: "Appearance", icon: Palette },
   { key: "audio", label: "Audio Source", icon: Headphones },
   { key: "reports", label: "Reports", icon: BarChart3 },
+  { key: "experimental", label: "Experimental", icon: FlaskConical },
   { key: "account", label: "Account", icon: User },
 ];
 
@@ -145,6 +147,31 @@ const SETTINGS_TABS: TabDef<SettingsTab>[] = [
  * bar, then report cards with eye tooltips. Links like /settings?tab=audio
  * open straight on a tab.
  */
+/** One experimental feature: what it is and an on/off switch. */
+function ExperimentalToggle({ feature, label, description, icon: Icon }: { feature: ExperimentalFeature; label: string; description: string; icon: IconComponent }) {
+  const [on, setOn] = useExperimental(feature);
+  return (
+    <div className="flex items-start gap-3 rounded-[10px] border border-[var(--ods-border)] bg-[var(--ods-bg-primary)] p-3">
+      <span className="w-8 h-8 shrink-0 rounded-md flex items-center justify-center bg-[var(--ods-bg-tertiary)] text-[var(--ods-text-secondary)]">
+        <Icon className="w-3.5 h-3.5" />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[14px] font-semibold text-[var(--ods-text-primary)]">{label}</div>
+        <p className="text-[13px] text-[var(--ods-text-secondary)] mt-0.5">{description}</p>
+      </div>
+      <button
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        onClick={() => setOn(!on)}
+        className={`relative mt-1 h-5 w-9 shrink-0 rounded-md transition-colors ${on ? "bg-[var(--ods-brand-600)]" : "bg-[var(--ods-border-strong)]"}`}
+      >
+        <span className={`absolute top-0.5 h-4 w-4 rounded-md bg-white shadow transition-[left] ${on ? "left-[18px]" : "left-0.5"}`} />
+      </button>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const { mode, setMode } = useTheme();
   const { dailyCallGoal, setDailyCallGoal, conversationSeconds, setConversationSeconds } = useReportSettings();
@@ -300,6 +327,20 @@ export function SettingsPage() {
               </div>
             </ReportCard>
           </>
+        )}
+
+        {tab === "experimental" && (
+          <ReportCard
+            title="Experimental"
+            unit="Off unless you turn it on"
+            tip={{ title: "Experimental", icon: FlaskConical, what: "Features still being tried out. Each one is hidden until you switch it on here.", use: "Applies to this browser only." }}
+          >
+            <div className="space-y-2">
+              {EXPERIMENTAL_FEATURES.map((f) => (
+                <ExperimentalToggle key={f.key} feature={f.key} label={f.label} description={f.description} icon={f.icon} />
+              ))}
+            </div>
+          </ReportCard>
         )}
 
         {tab === "account" && (
