@@ -63,6 +63,22 @@ function inOrBlank(field: string, values: string[]): Filter | null {
   return clauses.length > 1 ? { or: clauses } : clauses[0];
 }
 
+/** Relation id `in` values, where "__blank" matches no relation (ids have no empty string). */
+function idInOrBlank(field: string, values: string[]): Filter | null {
+  const ids = values.filter((v) => UUID.test(v));
+  const clauses: Filter[] = ids.length ? [{ [field]: { in: ids } }] : [];
+  if (values.includes("__blank")) clauses.push({ [field]: { is: "NULL" } });
+  return clauses.length > 1 ? { or: clauses } : (clauses[0] ?? null);
+}
+
+/** SELECT `in` values (Twenty option values are UPPER_SNAKE), "__blank" = not set. */
+function selectInOrBlank(field: string, values: string[]): Filter | null {
+  const named = values.filter((v) => /^[A-Z0-9_]+$/.test(v));
+  const clauses: Filter[] = named.length ? [{ [field]: { in: named } }] : [];
+  if (values.includes("__blank")) clauses.push({ [field]: { is: "NULL" } });
+  return clauses.length > 1 ? { or: clauses } : (clauses[0] ?? null);
+}
+
 function contains(raw: unknown): string {
   return typeof raw === "string" ? raw.trim().slice(0, 120) : "";
 }
@@ -83,7 +99,7 @@ function idScope(scope?: IdScope): Filter | null {
 }
 
 /** Column filters only prospects have (no such field on agencyLead). */
-const PROSPECT_ONLY = ["country", "industry", "company", "state", "city"];
+const PROSPECT_ONLY = ["country", "industry", "company", "state", "city", "assignedTo", "leadSource", "offer"];
 
 function orderBy(params: Record<string, unknown>, fields: Record<string, string>): Record<string, string>[] {
   const field = fields[typeof params.sort === "string" ? params.sort : ""] ?? "createdAt";
@@ -114,9 +130,16 @@ export function prospectGqlQuery(params: Record<string, unknown>, scope?: IdScop
     const clause = inOrBlank(field, list(params[param]));
     if (clause) parts.push(clause);
   }
+  for (const [param, field] of [["leadSource", "leadSource"], ["offer", "offer"]]) {
+    const clause = selectInOrBlank(field, list(params[param]));
+    if (clause) parts.push(clause);
+  }
+  const assigned = idInOrBlank("assignedToId", list(params.assignedTo));
+  if (assigned) parts.push(assigned);
   const ids = idScope(scope);
   if (ids) parts.push(ids);
-  if (typeof params.campaign === "string" && UUID.test(params.campaign)) parts.push({ campaignIdId: { eq: params.campaign } });
+  const campaigns = idInOrBlank("campaignIdId", list(params.campaign));
+  if (campaigns) parts.push(campaigns);
   return { filter: combine(parts), orderBy: orderBy(params, PROSPECT_SORT) };
 }
 
@@ -134,7 +157,8 @@ export function leadGqlQuery(params: Record<string, unknown>, scope?: IdScope) {
   if (ids) parts.push(ids);
   const status = statusFilter(params.status);
   if (status) parts.push(status);
-  if (typeof params.campaign === "string" && UUID.test(params.campaign)) parts.push({ campaignIdId: { eq: params.campaign } });
+  const campaigns = idInOrBlank("campaignIdId", list(params.campaign));
+  if (campaigns) parts.push(campaigns);
   return { filter: combine(parts), orderBy: orderBy(params, LEAD_SORT) };
 }
 

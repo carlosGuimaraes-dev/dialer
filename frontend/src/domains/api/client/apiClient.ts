@@ -36,6 +36,15 @@ export interface AudioSessionView {
   error: string | null;
 }
 
+/** A named set of contact filters saved to the member's account. */
+export interface SavedFilterView {
+  id: string;
+  name: string;
+  scope: string;
+  filters: Record<string, string>;
+  updatedAt: string | null;
+}
+
 /** One text in a contact's thread, as GET /api/messages returns it. */
 export interface TextMessage {
   id: string;
@@ -292,6 +301,17 @@ export const api = {
       request<{ contactLegId: string }>(`/api/audio-sessions/${id}/dial`, { method: "POST", body: JSON.stringify(data) }),
     hangup: (id: string) => request<void>(`/api/audio-sessions/${id}/hangup`, { method: "POST" }),
     end: (id: string) => request<void>(`/api/audio-sessions/${id}/end`, { method: "POST" }),
+  },
+
+  /** Contact filters saved to the signed-in member's account (dialerFilterView). */
+  filterViews: {
+    list: (scope: string) =>
+      request<{ current: Record<string, string> | null; views: SavedFilterView[] }>(`/api/filter-views?scope=${encodeURIComponent(scope)}`),
+    saveCurrent: (scope: string, filters: Record<string, string>) =>
+      request<SavedFilterView>("/api/filter-views/current", { method: "PUT", body: JSON.stringify({ scope, filters }) }),
+    create: (scope: string, name: string, filters: Record<string, string>) =>
+      request<SavedFilterView>("/api/filter-views", { method: "POST", body: JSON.stringify({ scope, name, filters }) }),
+    delete: (id: string) => request<void>(`/api/filter-views/${id}`, { method: "DELETE" }),
   },
 
   callCampaigns: {

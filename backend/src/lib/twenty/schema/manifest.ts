@@ -24,6 +24,7 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
     icon: "IconBuildingStore",
     fields: [
       { name: "brandColors", type: "RAW_JSON", label: "Brand Colors", description: "Logo-derived palette: { primary, palette[] }. primary drives BRAND_COLOR; null when the logo has no usable brand color." },
+      { name: "callOpener", type: "TEXT", label: "Call Opener" },
       { name: "city", type: "TEXT", label: "City", description: "City", isNullable: false },
       { name: "coldCallStatus", type: "SELECT", label: "Cold Call Status", description: "Status from manual cold calling workflow (separate from SMS outbound pipeline)", options: [
         { value: "NEW", label: "New", color: "gray" },
@@ -36,11 +37,16 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
       ] },
       { name: "country", type: "TEXT", label: "Country", description: "Country code or name", isNullable: false },
       { name: "createdByMemberId", type: "TEXT", label: "Created By Member ID" },
+      { name: "decisionMaker", type: "TEXT", label: "Decision Maker" },
+      { name: "decisionMakerPhone", type: "PHONES", label: "Decision Maker Phone" },
+      { name: "decisionMakerTitle", type: "TEXT", label: "Decision Maker Title" },
       { name: "email", type: "TEXT", label: "Email", description: "Primary email" },
       { name: "externalId", type: "TEXT", label: "External ID", description: "Stable external id (e.g. lead-pipeline uuid) for deduplication" },
       { name: "fullAddress", type: "TEXT", label: "Full Address", description: "Full formatted address from the lead list", isNullable: false },
       { name: "ghlWebhookUrl", type: "TEXT", label: "GHL Webhook URL", description: "GoHighLevel inbound webhook for lead forms (disconnected by default)" },
       { name: "googleReviewsUrl", type: "TEXT", label: "Google Reviews URL", description: "Public URL to the business Google reviews / Maps listing" },
+      { name: "hiringRole", type: "TEXT", label: "Hiring Role" },
+      { name: "jobPostUrl", type: "LINKS", label: "Job Post" },
       { name: "label", type: "SELECT", label: "Industry", description: "Industry segment used to pick a template site", isNullable: false, defaultValue: "'AUTO_PAINT_AND_BODY_SHOPS'", options: [
         { value: "AUTO_PAINT_AND_BODY_SHOPS", label: "Auto Paint & Body Shop", color: "orange" },
         { value: "WINDOW_TINTING", label: "Window Tinting", color: "blue" },
@@ -48,9 +54,21 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
         { value: "GENERAL_TRADES", label: "General Trades", color: "gray" },
         { value: "NURSERY_SCHOOL", label: "Nursery School", color: "purple" },
       ] },
+      { name: "leadSource", type: "SELECT", label: "Lead Source", options: [
+        { value: "HIRING_SIGNAL", label: "Hiring signal", color: "green" },
+        { value: "LOVABLE_SITE", label: "Lovable site", color: "blue" },
+        { value: "WEAK_SITE", label: "Weak site", color: "orange" },
+        { value: "REFERRAL", label: "Referral", color: "purple" },
+        { value: "MANUAL", label: "Manual", color: "gray" },
+      ] },
       { name: "logoUrl", type: "TEXT", label: "Logo URL", description: "HTTPS URL for the business logo (site icon / favicon). Not a Twenty FILES blob — the template <img> loads this URL." },
       { name: "niche", type: "TEXT", label: "Niche", description: "Source industry string from the lead list", isNullable: false },
       { name: "notes", type: "TEXT", label: "Notes" },
+      { name: "offer", type: "SELECT", label: "Offer", options: [
+        { value: "MARKETING", label: "Marketing", color: "blue" },
+        { value: "JOB_PLACEMENT", label: "Job placement", color: "green" },
+        { value: "BOTH", label: "Both", color: "purple" },
+      ] },
       { name: "outboundLabel", type: "SELECT", label: "Outbound Label", description: "Presentation/filter label derived from outboundState. Stored separately from smsMetadata so Twenty can filter, group, and build views from first-class fields.", options: [
         { value: "NEEDS_ENRICHMENT", label: "Needs Enrichment", color: "gray" },
         { value: "NEEDS_VIDEO", label: "Needs Video", color: "gray" },
@@ -94,6 +112,7 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
       { name: "reviews", type: "RAW_JSON", label: "Reviews", description: "Up to a few real Google review snippets: [{ name, text, rating?, vehicle? }]. Never invent — feeds REVIEW_* template tokens." },
       { name: "slug", type: "TEXT", label: "Slug", description: "URL-safe identifier for the template site", isNullable: false },
       { name: "smsMetadata", type: "RAW_JSON", label: "SMS Metadata", description: "Evolving SMS lifecycle payload (schemaVersion, consent, sequence, provider state). RAW_JSON — Twenty has no native JSON composite type. Not the message ledger; per-message delivery status goes in native Message records later." },
+      { name: "submittedBy", type: "TEXT", label: "Submitted By" },
       { name: "utmSource", type: "SELECT", label: "UTM Source", options: [
         { value: "OUTBOUND", label: "Outbound", color: "blue" },
         { value: "INBOUND", label: "Inbound", color: "green" },
@@ -394,6 +413,19 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
     ],
   },
   {
+    nameSingular: "dialerFilterView",
+    namePlural: "dialerFilterViews",
+    labelSingular: "Dialer Filter View",
+    labelPlural: "Dialer Filter Views",
+    description: "Contact filters saved by a dialer user, so they follow the account to any browser",
+    icon: "IconFilter",
+    fields: [
+      { name: "filters", type: "RAW_JSON", label: "Filters" },
+      { name: "memberId", type: "TEXT", label: "Member ID" },
+      { name: "scope", type: "TEXT", label: "Scope" },
+    ],
+  },
+  {
     nameSingular: "dialerAudioSession",
     namePlural: "dialerAudioSessions",
     labelSingular: "Dialer Audio Session",
@@ -460,6 +492,28 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
 
 /** Created after every object exists, from the MANY_TO_ONE side. */
 export const SCHEMA_RELATIONS: SchemaRelation[] = [
+  {
+    object: "agencyProspect",
+    name: "assignedTo",
+    label: "Assigned To",
+    icon: "IconUser",
+    target: "workspaceMember",
+    targetFieldName: "assignedAgencyProspects",
+    targetFieldLabel: "Assigned Agency Prospects",
+    targetFieldIcon: "IconUser",
+    onDelete: "SET_NULL",
+  },
+  {
+    object: "agencyProspect",
+    name: "assignedBy",
+    label: "Assigned By",
+    icon: "IconUser",
+    target: "workspaceMember",
+    targetFieldName: "agencyProspectsAssigned",
+    targetFieldLabel: "Agency Prospects Assigned",
+    targetFieldIcon: "IconUser",
+    onDelete: "SET_NULL",
+  },
   {
     object: "agencyProspect",
     name: "campaignId",

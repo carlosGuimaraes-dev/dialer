@@ -25,10 +25,12 @@ import {
   PhoneOutgoing,
   Pin,
   Play,
+  Save,
   Search,
   Settings,
   SkipForward,
   Square,
+  Trash2,
   User,
   Users,
   X,
@@ -54,6 +56,8 @@ import { regionOfCountry } from "@dialer/shared";
 import { countryCode, countryName } from "@/domains/country/lookup";
 import { DISPOSITIONS, dispositionFor, outcomeLabel } from "@/domains/calls/disposition";
 import { isLive, useDialer, type CallState } from "@/domains/dialer/provider";
+import { useAuth } from "@/domains/auth/provider";
+import { useAccountFilters } from "./useAccountFilters";
 
 // Buttons and inputs come from the design primitives (docs/design-system.md).
 const BTN_PRIMARY = buttonClass({ variant: "primary" });
@@ -443,8 +447,30 @@ interface DockFilters {
   industry: string;
   state: string;
   city: string;
+  /** "all", "__blank" (no campaign) or an agencyCampaign id. */
+  campaign: string;
+  /** "all", "__me", "__blank" (unassigned) or a workspace member id. */
+  assignedTo: string;
+  /** "all", "__blank" or a Twenty option value (HIRING_SIGNAL, BOTH...). */
+  leadSource: string;
+  offer: string;
+  [key: string]: string;
 }
-const DOCK_FILTERS: DockFilters = { country: "all", status: "all", lastCall: "all", type: "all", industry: "all", state: "all", city: "all" };
+const DOCK_FILTERS: DockFilters = {
+  country: "all",
+  status: "all",
+  lastCall: "all",
+  type: "all",
+  industry: "all",
+  state: "all",
+  city: "all",
+  campaign: "all",
+  assignedTo: "all",
+  leadSource: "all",
+  offer: "all",
+};
+/** Twenty option value -> label for the SELECT filters (HIRING_SIGNAL -> "Hiring signal"). */
+const optionLabel = (raw: string) => raw.charAt(0) + raw.slice(1).toLowerCase().replace(/_/g, " ");
 const DOCK_STATUSES: Array<[app: string, twenty: string, label: string]> = [
   ["new", "NEW", "New"],
   ["contacted", "CONTACTED", "Contacted"],
@@ -490,6 +516,90 @@ function DockFilter({ label, value, options, onChange }: { label: string; value:
   );
 }
 
+/**
+ * The dock's saved filter sets: pick one to apply it, name and save the
+ * filters on screen, or delete one. Saved to the member's account.
+ */
+function SavedFiltersMenu({ account, filtered }: { account: ReturnType<typeof useAccountFilters<DockFilters>>; filtered: boolean }) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const DELETE = "delete:";
+  const options = account.views.map((v) => ({
+    value: v.id,
+    label: v.name,
+    hint: `${Object.values(v.filters).filter((x) => x !== "all").length} filters`,
+  }));
+  return (
+    <SelectMenu
+      value={null}
+      width={280}
+      placement="bottom-end"
+      onChange={(value) => {
+        if (value.startsWith(DELETE)) {
+          void account.remove(value.slice(DELETE.length)).catch(() => setError("Could not delete that filter set."));
+          return;
+        }
+        const view = account.views.find((v) => v.id === value);
+        if (view) account.apply(view);
+      }}
+      sections={[
+        {
+          title: "Saved filters",
+          options: options.length ? options : [{ value: "none", label: "None saved yet", disabled: true, description: "Set some filters, name them above and save." }],
+        },
+        ...(options.length
+          ? [{ title: "Delete", options: account.views.map((v) => ({ value: `${DELETE}${v.id}`, label: v.name, icon: <Trash2 className="w-3.5 h-3.5 text-red-600" /> })) }]
+          : []),
+      ]}
+      header={(close) => (
+        <form
+          className="p-2 border-b border-[var(--ods-border)] space-y-1"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const trimmed = name.trim();
+            if (!trimmed) return;
+            setError(null);
+            account
+              .saveAs(trimmed)
+              .then(() => {
+                setName("");
+                close();
+              })
+              .catch(() => setError("Not saved. Try again in a moment."));
+          }}
+        >
+          <div className="flex items-center gap-1.5">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={filtered ? "Name these filters" : "Set filters, then name them"}
+              aria-label="Name for the saved filters"
+              className={`${INPUT} h-7 text-[12px]`}
+            />
+            <button type="submit" disabled={!name.trim() || account.saving} className={`${BTN_ICON} shrink-0`} title="Save these filters to your account">
+              <Save className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {error && (
+            <div role="alert" className="text-[12px] text-red-600">
+              {error}
+            </div>
+          )}
+        </form>
+      )}
+      triggerTitle="Saved filters"
+      triggerClassName="h-7 px-2 ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--ods-border)] text-[12px] font-medium text-[var(--ods-text-secondary)] hover:bg-[var(--ods-hover)]"
+      trigger={
+        <>
+          <Save className="w-3 h-3" />
+          Saved
+          <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
+        </>
+      }
+    />
+  );
+}
+
 function ContactsTab() {
   const { dial, lines, line } = useDialer();
   const navigate = useNavigate();
@@ -499,7 +609,11 @@ function ContactsTab() {
   const [debounced, setDebounced] = useState("");
   const [saved, setFilters] = usePersistedState<DockFilters>("dialer-contact-filters", DOCK_FILTERS);
   const f = { ...DOCK_FILTERS, ...saved };
-  const set = (patch: Partial<DockFilters>) => setFilters({ ...f, ...patch });
+  const set = (patch: Partial<DockFilters>) => setFilters({ ...f, ...patch } as DockFilters);
+  // Also kept on the member's account, so the filters follow them to any browser.
+  const account = useAccountFilters("dock", f, setFilters, DOCK_FILTERS);
+  const { user } = useAuth();
+  const me = user?.memberId ?? null;
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q.trim()), 250);
     return () => clearTimeout(t);
@@ -555,7 +669,24 @@ function ContactsTab() {
     { value: "prospect", label: "Prospects", hint: facets?.type?.prospect },
     { value: "lead", label: "Leads", hint: facets?.type?.lead },
   ];
+  // Id- and option-valued filters, with "none" for records that have no value.
+  const namedOptions = (counts: Record<string, number> | undefined, label: (raw: string) => string, none: string): DockFilterOption[] => [
+    ...Object.entries(counts ?? {})
+      .filter(([raw]) => raw !== "__blank")
+      .sort((a, b) => b[1] - a[1])
+      .map(([raw, n]) => ({ value: raw, label: label(raw), hint: n })),
+    ...(counts?.__blank ? [{ value: "__blank", label: none, hint: counts.__blank }] : []),
+  ];
+  const memberName = (id: string) => facets?.names?.member?.[id] ?? "Unknown member";
+  const assignedOptions: DockFilterOption[] = [
+    ...(me ? [{ value: "__me", label: "Me", icon: <User className="w-3.5 h-3.5" />, hint: facets?.assignedTo?.[me] ?? 0 }] : []),
+    ...namedOptions(facets?.assignedTo, memberName, "Unassigned"),
+  ];
   const extra: Array<[keyof DockFilters, string, DockFilterOption[]]> = [
+    ["assignedTo", "Assigned to", assignedOptions],
+    ["campaign", "Campaign", namedOptions(facets?.campaign, (id) => facets?.names?.campaign?.[id] ?? "Unknown campaign", "No campaign")],
+    ["leadSource", "Lead source", namedOptions(facets?.leadSource, optionLabel, "No lead source")],
+    ["offer", "Offer", namedOptions(facets?.offer, optionLabel, "No offer")],
     ["type", "Type", typeOptions],
     ["industry", "Industry", valueOptions(facets?.industry)],
     ["state", "State", valueOptions(facets?.state)],
@@ -573,6 +704,10 @@ function ContactsTab() {
     industry: f.industry !== "all" ? [f.industry] : undefined,
     state: f.state !== "all" ? [f.state] : undefined,
     city: f.city !== "all" ? [f.city] : undefined,
+    campaign: f.campaign !== "all" ? [f.campaign] : undefined,
+    assignedTo: f.assignedTo === "all" ? undefined : [f.assignedTo === "__me" ? (me ?? "__blank") : f.assignedTo],
+    leadSource: f.leadSource !== "all" ? [f.leadSource] : undefined,
+    offer: f.offer !== "all" ? [f.offer] : undefined,
   };
   const { data, isFetching } = useQuery({
     queryKey: ["dialer-contact-search", query],
@@ -596,7 +731,7 @@ function ContactsTab() {
           <button
             onClick={() => setMore(!more)}
             aria-expanded={more}
-            title={more ? "Hide the other filters" : "Filter by type, industry, state and city"}
+            title={more ? "Hide the other filters" : "Filter by assignee, campaign, lead source, offer, type, industry, state and city"}
             className={`h-7 px-2 inline-flex items-center gap-1 rounded-md border text-[12px] font-medium ${
               more || extraActive
                 ? "border-[color-mix(in_srgb,var(--ods-brand-600)_40%,transparent)] text-[var(--ods-brand-700)] dark:text-[var(--ods-brand-300)]"
@@ -610,8 +745,9 @@ function ContactsTab() {
             extra.map(([key, label, options]) => (
               <DockFilter key={key} label={label} value={f[key]} options={options} onChange={(v) => set({ [key]: v })} />
             ))}
+          <SavedFiltersMenu account={account} filtered={filtered} />
           {filtered && (
-            <button onClick={() => setFilters(DOCK_FILTERS)} title="Clear filters" aria-label="Clear the contact filters" className={`${BTN_ICON} ml-auto shrink-0`}>
+            <button onClick={() => setFilters(DOCK_FILTERS)} title="Clear filters" aria-label="Clear the contact filters" className={`${BTN_ICON} shrink-0`}>
               <X className="w-3.5 h-3.5" />
             </button>
           )}
