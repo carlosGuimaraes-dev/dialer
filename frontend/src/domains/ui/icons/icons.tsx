@@ -46,6 +46,7 @@ import {
   faBackwardStep,
   faForwardStep,
   faMusic,
+  faFlask,
   faGear,
   faGlobe,
   faGripVertical,
@@ -194,6 +195,7 @@ export const Shield = solid(faShieldHalved, "Shield");
 export const SkipBack = solid(faBackwardStep, "SkipBack");
 export const SkipForward = solid(faForwardStep, "SkipForward");
 export const Music = solid(faMusic, "Music");
+export const FlaskConical = solid(faFlask, "FlaskConical");
 export const Square = solid(faStop, "Square");
 export const Star = solid(faStar, "Star");
 export const Sun = solid(faSun, "Sun");

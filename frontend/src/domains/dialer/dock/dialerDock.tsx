@@ -38,6 +38,7 @@ import { Chip } from "@/domains/ui/chip";
 import { SelectMenu } from "@/domains/ui/menu";
 import { TabBar } from "@/domains/ui/tabBar";
 import { MusicTab, NowPlaying } from "@/domains/music/dock";
+import { useExperimental } from "@/domains/app/experimental";
 import { CountryFlag } from "@/domains/country/badge";
 import { DispositionBadge, DispositionIcon } from "@/domains/calls/disposition";
 import { AudioSourceSettings } from "@/domains/dialer/audio";
@@ -309,12 +310,14 @@ function IdleView() {
   const { cooldownNotice, dialAnyway, discardSummary, target } = useDialer();
   const { queue } = usePowerDialer();
   const [tab, setTab] = usePersistedState<IdleTab>("dialer-tab", "recents");
-  const shown = queue ? tab : tab === "queue" ? "recents" : tab;
+  // The music player is experimental (Settings > Experimental).
+  const [music] = useExperimental("musicPlayer");
+  const shown = (tab === "queue" && !queue) || (tab === "music" && !music) ? "recents" : tab;
   const tabs = [
     { key: "recents" as const, label: "Recents", icon: Clock },
     { key: "contacts" as const, label: "Contacts", icon: Users },
     { key: "keypad" as const, label: "Keypad", icon: Keyboard },
-    { key: "music" as const, label: "Music", icon: Music },
+    ...(music ? [{ key: "music" as const, label: "Music", icon: Music }] : []),
     ...(queue ? [{ key: "queue" as const, label: "Queue", icon: SkipForward, badge: `${queue.position}/${queue.total}` }] : []),
   ];
   return (

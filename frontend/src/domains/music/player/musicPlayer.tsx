@@ -3,6 +3,7 @@ import type Hls from "hls.js";
 import { api } from "@/domains/api/client";
 import { usePersistedState } from "@/domains/app/persistedState";
 import { useDialer } from "@/domains/dialer/provider";
+import { useExperimental } from "@/domains/app/experimental";
 
 /** A SoundCloud track, as /api/music/search returns it. */
 export interface MusicTrack {
@@ -101,6 +102,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const current = useMemo(() => queue.find((t) => t.id === currentId) ?? null, [queue, currentId]);
+
+  // Experimental: switching Settings > Experimental > Music player off silences it.
+  const [enabled] = useExperimental("musicPlayer");
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = Math.max(0, Math.min(1, volume / 100));
@@ -204,6 +208,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     },
     [currentId, stop, setQueue, setCurrentId],
   );
+
+  useEffect(() => {
+    if (!enabled) stop();
+  }, [enabled, stop]);
 
   const enqueue = useCallback((track: MusicTrack) => setQueue((q) => (q.some((t) => t.id === track.id) ? q : [...q, track])), [setQueue]);
 

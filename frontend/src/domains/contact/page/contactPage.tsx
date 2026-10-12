@@ -9,6 +9,7 @@ import { useToast } from "@/domains/ui/toast";
 import { ContactWorkspaceSkeleton } from "@/domains/ui/skeleton";
 import { useAuth } from "@/domains/auth/provider";
 import { usePersistedState } from "@/domains/app/persistedState";
+import { useExperimental } from "@/domains/app/experimental";
 import { useCallsForRecord } from "@/domains/calls/data";
 import { api } from "@/domains/api/client";
 import { useUpdateContact, type ContactType } from "@/domains/contact/list";
@@ -59,8 +60,12 @@ export function ContactPage({ type }: { type: ContactType }) {
     return () => ro.disconnect();
   }, [rootEl]);
 
-  const [panel, setPanel] = usePersistedState<RailTab | null>("contact-rail-panel", "summary");
+  const [savedPanel, setPanel] = usePersistedState<RailTab | null>("contact-rail-panel", "summary");
   const [narrowTab, setNarrowTab] = useState<NarrowTab>("timeline");
+  // The website preview is experimental: a remembered "website" panel stays shut while it is off.
+  const [websitePreview] = useExperimental("websitePreview");
+  const panel = savedPanel === "website" && !websitePreview ? null : savedPanel;
+  const shownNarrow: NarrowTab = narrowTab === "website" && !websitePreview ? "timeline" : narrowTab;
   const [composer, setComposer] = useState<ComposerMode>("note");
   const [composerFocus, setComposerFocus] = useState(0);
 
@@ -134,15 +139,15 @@ export function ContactPage({ type }: { type: ContactType }) {
       { key: "summary" as const, label: "Summary", icon: BarChart3 },
       { key: "script" as const, label: "Script", icon: BookOpen },
       { key: "notes" as const, label: "Notes", icon: FileText },
-      ...(type === "prospect" ? [{ key: "website" as const, label: "Website", icon: Globe }] : []),
+      ...(type === "prospect" && websitePreview ? [{ key: "website" as const, label: "Website", icon: Globe }] : []),
     ];
     return (
       <div ref={setRootEl} className="flex flex-col flex-1 min-h-0">
         <div className="p-2 border-b border-[var(--ods-border)] shrink-0">
-          <TabBar tabs={tabs} value={narrowTab} onChange={setNarrowTab} />
+          <TabBar tabs={tabs} value={shownNarrow} onChange={setNarrowTab} />
         </div>
         <div className="flex-1 min-h-0 flex flex-col">
-          {narrowTab === "details" ? sidebar : narrowTab === "timeline" ? feed : railPanel(narrowTab, () => setNarrowTab("timeline"))}
+          {shownNarrow === "details" ? sidebar : shownNarrow === "timeline" ? feed : railPanel(shownNarrow, () => setNarrowTab("timeline"))}
         </div>
       </div>
     );

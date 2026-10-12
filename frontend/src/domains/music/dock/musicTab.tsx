@@ -7,6 +7,7 @@ import { inputClass } from "@/domains/ui/input";
 import { AudioLines, Music, Pause, Play, Plus, Search, SkipBack, SkipForward, Trash2 } from "@/domains/ui/icons";
 import { useMusicPlayer, type MusicTrack } from "@/domains/music/player";
 import { Waveform } from "./waveform";
+import { useExperimental } from "@/domains/app/experimental";
 
 const clock = (seconds: number) => {
   const s = Math.max(0, Math.floor(seconds));
@@ -26,7 +27,8 @@ function Artwork({ track, size = "w-10 h-10" }: { track: MusicTrack | null; size
 /** Play / pause / skip, and the song's progress. */
 export function NowPlaying({ compact = false }: { compact?: boolean }) {
   const m = useMusicPlayer();
-  if (!m.current) return null;
+  const [enabled] = useExperimental("musicPlayer");
+  if (!enabled || !m.current) return null;
   const length = m.duration || (m.current.durationMs ?? 0) / 1000;
   return (
     <div className={compact ? "px-3 py-2 border-t border-[var(--ods-border)]" : "p-3 border-b border-[var(--ods-border)]"}>
