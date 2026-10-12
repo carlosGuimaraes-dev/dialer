@@ -1,9 +1,8 @@
 import { Router } from "express";
 import { authMiddleware, AuthRequest } from "../../../middleware/auth.js";
-import { fetchTwenty } from "../../../lib/twenty/client/index.js";
 import { createLogger } from "../../../lib/logger/index.js";
 import type { TwentyObject } from "./types.js";
-import { findTargetObject, extractFieldOptions } from "./helpers/index.js";
+import { findTargetObject, extractFieldOptions, fetchMetadataObjects } from "./helpers/index.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -16,9 +15,8 @@ const log = createLogger('twentyMeta');
 router.get("/:object", async (req, res) => {
   try {
     const objectName = req.params.object;
-    
-    const response = await fetchTwenty<{ data: TwentyObject[] }>("/metadata/objects");
-    const allObjects = response.data || [];
+
+    const allObjects = await fetchMetadataObjects();
     
     // Find matching object by name
     const targetObject = findTargetObject(allObjects, objectName);
