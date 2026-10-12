@@ -59,6 +59,14 @@ export interface ContactFacets {
   city?: Record<string, number>;
   /** How the newest call ended -> contacts ("__never" = never called). */
   lastCall?: Record<string, number>;
+  /** Assigned workspace member id -> prospects ("__blank" = unassigned). */
+  assignedTo?: Record<string, number>;
+  /** Lead source option -> prospects. */
+  leadSource?: Record<string, number>;
+  /** Offer option -> prospects. */
+  offer?: Record<string, number>;
+  /** Display names for the id-valued facets. */
+  names?: { member: Record<string, string>; campaign: Record<string, string> };
 }
 
 export interface ContactQuery {
@@ -68,7 +76,8 @@ export interface ContactQuery {
   /** Raw country values (several spellings of one country). */
   country?: string[];
   industry?: string[];
-  campaign?: string;
+  /** One campaign id, or several (any of them). */
+  campaign?: string | string[];
   /** Text the name / phone contains. */
   name?: string;
   phone?: string;
@@ -78,6 +87,10 @@ export interface ContactQuery {
   city?: string[];
   /** Outcome of the newest call, or "__never". */
   lastCall?: string;
+  /** Prospect-only: assigned member ids, lead source and offer options ("__blank" = not set). */
+  assignedTo?: string[];
+  leadSource?: string[];
+  offer?: string[];
   sort?: string;
   dir?: "asc" | "desc";
 }
@@ -91,13 +104,17 @@ function toParams(query: ContactQuery, offset = 0, limit = PAGE_SIZE): string {
   if (query.status?.length) p.set("status", query.status.join("|"));
   if (query.country?.length) p.set("country", query.country.join("|"));
   if (query.industry?.length) p.set("industry", query.industry.join("|"));
-  if (query.campaign) p.set("campaign", query.campaign);
+  const campaigns = typeof query.campaign === "string" ? [query.campaign] : (query.campaign ?? []);
+  if (campaigns.length) p.set("campaign", campaigns.join("|"));
   if (query.name?.trim()) p.set("name", query.name.trim());
   if (query.phone?.trim()) p.set("phone", query.phone.trim());
   if (query.company?.length) p.set("company", query.company.join("|"));
   if (query.state?.length) p.set("state", query.state.join("|"));
   if (query.city?.length) p.set("city", query.city.join("|"));
   if (query.lastCall) p.set("lastCall", query.lastCall);
+  if (query.assignedTo?.length) p.set("assignedTo", query.assignedTo.join("|"));
+  if (query.leadSource?.length) p.set("leadSource", query.leadSource.join("|"));
+  if (query.offer?.length) p.set("offer", query.offer.join("|"));
   if (query.sort) p.set("sort", query.sort);
   if (query.dir) p.set("dir", query.dir);
   return p.toString();

@@ -11,6 +11,7 @@ import { checkSmsRoute, offerMachine, onPageSent, toE164 } from "@dialer/shared"
 import { frameAllowed, framingHeaders, prospectPageUrl } from "../../lib/website/index.js";
 import { createLogger } from "../../lib/logger/index.js";
 import { resolveActor } from "../../lib/twenty/actor/index.js";
+import { listWorkspaceMembers } from "../../lib/twenty/workspaceMember/index.js";
 import type { AgencyProspect, AgencyCampaign, IndustryRouting } from "./types.js";
 import {
   selectValue,
@@ -213,14 +214,26 @@ router.get("/facets", async (_req, res) => {
       }
       return out;
     };
-    const [status, country, industry, campaign, creators, state, city, last] = await Promise.all([
+    const none = () => ({}) as Record<string, number>;
+    const [status, country, industry, campaign, creators, state, city, assignedTo, leadSource, offer, memberNames, campaignNames, last] = await Promise.all([
       group("coldCallStatus"),
       group("country"),
       group("niche"),
       group("campaignIdId"),
-      group("createdByMemberId").catch(() => ({}) as Record<string, number>),
-      group("region").catch(() => ({}) as Record<string, number>),
-      group("city").catch(() => ({}) as Record<string, number>),
+      group("createdByMemberId").catch(none),
+      group("region").catch(none),
+      group("city").catch(none),
+      // Workspaces without these fields (bun run twenty:schema adds them) just get no counts.
+      group("assignedToId").catch(none),
+      group("leadSource").catch(none),
+      group("offer").catch(none),
+      // Names for the id-valued menus (Assigned to, Campaign).
+      listWorkspaceMembers()
+        .then((ms) => Object.fromEntries(ms.map((m) => [m.id, [m.firstName, m.lastName].filter(Boolean).join(" ").trim() || m.userEmail || m.id])))
+        .catch(() => ({}) as Record<string, string>),
+      listTwenty<AgencyCampaign>("agencyCampaigns", 200)
+        .then((cs) => Object.fromEntries(cs.map((c: any) => [c.id, String(c.name ?? c.id)])))
+        .catch(() => ({}) as Record<string, string>),
       // A failed call walk only loses the Last call counts, not the other filters.
       lastCallIndex().catch((err) => {
         log.info(`Last-call counts skipped: ${err.message}`);
@@ -232,7 +245,22 @@ router.get("/facets", async (_req, res) => {
     const leadsBody: any = await fetchTwenty("agencyLeads", { limit: 1 });
     const leads = typeof leadsBody?.totalCount === "number" ? leadsBody.totalCount : 0;
     const lastCall = last ? { ...outcomeCounts(last), [NEVER_CALLED]: Math.max(0, total + leads - last.size) } : {};
-    res.json({ total: total + leads, type: { prospect: total, lead: leads }, status, country, industry, campaign, creator, state, city, lastCall });
+    res.json({
+      total: total + leads,
+      type: { prospect: total, lead: leads },
+      status,
+      country,
+      industry,
+      campaign,
+      creator,
+      state,
+      city,
+      lastCall,
+      assignedTo,
+      leadSource,
+      offer,
+      names: { member: memberNames, campaign: campaignNames },
+    });
   } catch (err: any) {
     log.error("Failed to count prospect facets:", err.message);
     res.status(500).json({ error: "Failed to count contacts in Twenty", details: err.message });
