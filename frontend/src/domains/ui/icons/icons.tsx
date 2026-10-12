@@ -43,7 +43,9 @@ import {
   faFileLines,
   faFilter,
   faFloppyDisk,
+  faBackwardStep,
   faForwardStep,
+  faMusic,
   faGear,
   faGlobe,
   faGripVertical,
@@ -189,7 +191,9 @@ export const Save = solid(faFloppyDisk, "Save");
 export const Search = solid(faMagnifyingGlass, "Search");
 export const Settings = solid(faGear, "Settings");
 export const Shield = solid(faShieldHalved, "Shield");
+export const SkipBack = solid(faBackwardStep, "SkipBack");
 export const SkipForward = solid(faForwardStep, "SkipForward");
+export const Music = solid(faMusic, "Music");
 export const Square = solid(faStop, "Square");
 export const Star = solid(faStar, "Star");
 export const Sun = solid(faSun, "Sun");

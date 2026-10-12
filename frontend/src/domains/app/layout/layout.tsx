@@ -9,6 +9,7 @@ import { usePersistedState } from '@/domains/app/persistedState';
 import { PowerDialerProvider } from '@/domains/campaigns/powerDialer';
 import { AudioBridgeProvider } from '@/domains/dialer/audio';
 import { DialerProvider } from '@/domains/dialer/provider';
+import { MusicPlayerProvider } from '@/domains/music/player';
 import { DialerDock, DialerTopButton } from '@/domains/dialer/dock';
 import {
   BarChart3,
@@ -169,6 +170,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <AudioBridgeProvider>
     <DialerProvider>
+    <MusicPlayerProvider>
     <PowerDialerProvider>
     <div className="flex h-screen overflow-hidden bg-[var(--ods-bg-secondary,#fafafb)] text-[var(--ods-text-primary,#18181b)] font-sans antialiased">
       {/* always-visible sidebar: every section as an icon + label row */}
@@ -301,6 +303,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     </div>
     <DialerDock />
     </PowerDialerProvider>
+    </MusicPlayerProvider>
     </DialerProvider>
     </AudioBridgeProvider>
   );
