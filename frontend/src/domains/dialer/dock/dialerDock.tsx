@@ -685,7 +685,6 @@ function ContactsTab() {
     ...(o.isMe ? { icon: <User className="w-3.5 h-3.5" /> } : {}),
   }));
   const extra: Array<[keyof DockFilters, string, DockFilterOption[]]> = [
-    ["assignedTo", "Assigned to", assignedOptions],
     ["campaign", "Campaign", namedOptions(facets?.campaign, (id) => facets?.names?.campaign?.[id] ?? "Unknown campaign", "No campaign")],
     ["leadSource", "Lead source", namedOptions(facets?.leadSource, optionLabel, "No lead source")],
     ["offer", "Offer", namedOptions(facets?.offer, optionLabel, "No offer")],
@@ -729,6 +728,7 @@ function ContactsTab() {
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <DockFilter label="Country" value={f.country} options={countryOptions} onChange={(v) => set({ country: v })} />
           <DockFilter label="Status" value={f.status} options={statusOptions} onChange={(v) => set({ status: v })} />
+          <DockFilter label="Assigned" value={f.assignedTo} options={assignedOptions} onChange={(v) => set({ assignedTo: v })} />
           <DockFilter label="Last call" value={f.lastCall} options={lastCallOptions} onChange={(v) => set({ lastCall: v })} />
           <button
             onClick={() => setMore(!more)}
@@ -776,7 +776,11 @@ function ContactsTab() {
               icon={Phone}
               iconClass={r.phone ? "text-emerald-600" : "text-[var(--ods-text-tertiary)]"}
               title={name}
-              meta={[r.phone || "No number", r.company].filter(Boolean).join(" · ")}
+              meta={[
+                r.phone || "No number",
+                r.company,
+                r.assignedToId && facets?.names?.member?.[r.assignedToId] ? `Assigned to ${facets.names.member[r.assignedToId]}` : null,
+              ].filter(Boolean).join(" · ")}
               onClick={() =>
                 r.phone &&
                 void dial({ contactType: r.type, contactId: r.id, phone: r.phone, name, campaignId: (r.campaign_id as string | null) ?? null, country: (r.country as string | undefined) ?? null })

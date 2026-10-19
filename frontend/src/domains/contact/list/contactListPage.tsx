@@ -24,6 +24,9 @@ import type { CallCampaign } from "@/domains/api/client";
 import { CountryBadge, CountryFlag } from "@/domains/country/badge";
 import { countryCode, countryName } from "@/domains/country/lookup";
 import { timeAgo } from "@/domains/admin/data";
+import { useAuth } from "@/domains/auth/provider";
+import { initials } from "@/domains/contact/model";
+import { memberOptions, resolveMember, type MemberOption } from "./memberOptions";
 import {
   contactName,
   useContactFacets,
@@ -43,6 +46,7 @@ const PROSPECT_FIELD_FOR_KEY: Record<string, string | null> = {
   company: "niche",
   phone: "phone",
   status: "coldCallStatus",
+  assigned_to: "assignedTo",
   state: "region",
   city: "city",
   industry: "niche",
@@ -150,6 +154,16 @@ export function ProspectPage() {
   const stateOptions = valueOptions(facets?.state, "No state");
   const cityOptions = valueOptions(facets?.city, "No city");
 
+  const { user } = useAuth();
+  const me = user?.memberId ?? null;
+  const memberNames = facets?.names?.member ?? {};
+
+  const assignedOptions = useMemo(() => {
+    return memberOptions(facets?.names?.member, facets?.assignedTo, me).map((o: MemberOption) =>
+      option(o.value, o.label, o.isMe ? <User className="w-3.5 h-3.5" /> : null, o.count),
+    );
+  }, [facets?.names?.member, facets?.assignedTo, me]);
+
   // Last call: how the newest call ended, most common first, then Never called.
   const lastCallOptions = Object.entries(facets?.lastCall ?? {})
     .filter(([raw]) => raw !== NEVER_CALLED)
@@ -166,6 +180,7 @@ export function ProspectPage() {
     status: pick("status", statusFilterOptions),
     country: pick("country", countryOptions),
     contact_type: pick("contact_type", typeOptions),
+    assigned_to: pick("assigned_to", assignedOptions),
     industry: pick("industry", industryOptions),
     company: pick("company", companyOptions),
     state: pick("state", stateOptions),
@@ -183,6 +198,7 @@ export function ProspectPage() {
     status: active.status !== ALL ? [active.status] : undefined,
     country: active.country !== ALL ? countryGroups.get(active.country)?.raws : undefined,
     type: active.contact_type !== ALL ? [active.contact_type as ContactType] : undefined,
+    assignedTo: active.assigned_to !== ALL ? [resolveMember(active.assigned_to, me)] : undefined,
     industry: active.industry !== ALL ? [active.industry] : undefined,
     company: active.company !== ALL ? [active.company] : undefined,
     state: active.state !== ALL ? [active.state] : undefined,
@@ -345,6 +361,29 @@ export function ProspectPage() {
           <span className="text-[12px] text-[var(--ods-text-tertiary)]">Never called</span>
         ),
     },
+    {
+      key: "assigned_to",
+      label: "Assigned to",
+      type: "custom",
+      width: 160,
+      sortable: false,
+      filterable: true,
+      headerExtra: fieldLink("assigned_to"),
+      value: (r) => (r.assignedToId ? memberNames[r.assignedToId] ?? "Assigned" : "Unassigned"),
+      render: (r) => {
+        const name = r.assignedToId ? memberNames[r.assignedToId] ?? null : null;
+        return name ? (
+          <span className="inline-flex items-center gap-1.5 min-w-0" title={name}>
+            <span className="w-5 h-5 rounded-md bg-[var(--ods-bg-tertiary)] text-[12px] font-semibold flex items-center justify-center shrink-0">
+              {initials(name)}
+            </span>
+            <span className="truncate text-[13px]">{name}</span>
+          </span>
+        ) : (
+          <span className="text-[12px] text-[var(--ods-text-tertiary)]">Unassigned</span>
+        );
+      },
+    },
     { key: "state", label: "State", type: "text", width: 110, value: (r) => r.state, headerExtra: fieldLink("state"), filterable: true },
     { key: "city", label: "City", type: "text", width: 120, value: (r) => r.city, headerExtra: fieldLink("city"), filterable: true },
     {
@@ -394,6 +433,7 @@ export function ProspectPage() {
             status: asHeaderOptions(statusFilterOptions),
             country: asHeaderOptions(countryOptions),
             contact_type: asHeaderOptions(typeOptions),
+            assigned_to: asHeaderOptions(assignedOptions),
             industry: asHeaderOptions(industryOptions),
             company: asHeaderOptions(companyOptions),
             state: asHeaderOptions(stateOptions),
@@ -402,7 +442,7 @@ export function ProspectPage() {
           },
         }}
         onClearFilters={() => {
-          for (const key of ["status", "country", "contact_type", "industry", "company", "state", "city", "last_call", "name", "phone"]) setColumnFilter(key, ALL);
+          for (const key of ["status", "country", "contact_type", "assigned_to", "industry", "company", "state", "city", "last_call", "name", "phone"]) setColumnFilter(key, ALL);
         }}
         selection={{
           onDelete: handleBulkDelete,
@@ -417,6 +457,7 @@ export function ProspectPage() {
         filters={
           <>
             <StatusFilterDropdown label="Type" allLabel="All types" value={active.contact_type} options={typeOptions} onChange={(v) => setColumnFilter("contact_type", v)} />
+            <StatusFilterDropdown label="Assigned to" allLabel="All members" value={active.assigned_to} options={assignedOptions} onChange={(v) => setColumnFilter("assigned_to", v)} />
             <StatusFilterDropdown value={active.status} options={statusFilterOptions} onChange={(v) => setColumnFilter("status", v)} />
             <StatusFilterDropdown label="Country" allLabel="All countries" value={active.country} options={countryOptions} onChange={(v) => setColumnFilter("country", v)} />
           </>

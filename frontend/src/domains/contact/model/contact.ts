@@ -36,6 +36,8 @@ export interface Contact {
   googleReviewsUrl: string | null;
   campaignId: string | null;
   notes: string | null;
+  assignedToId?: string | null;
+  createdByMemberId?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }

@@ -38,6 +38,7 @@ import type { Contact } from "@/domains/contact/model";
 import { initials } from "@/domains/contact/model";
 import { ContactPeople } from "@/domains/contact/people";
 import { usePeople } from "@/domains/contact/people";
+import { useContactFacets } from "@/domains/contact/list";
 
 
 type Patch = Record<string, unknown>;
@@ -70,7 +71,7 @@ const addressPatch = (c: Contact, key: "address" | "city" | "state" | "zip", v: 
   [key]: v,
 });
 
-function folders(type: Contact["type"]): { title: string; fields: FieldDef[] }[] {
+function folders(type: Contact["type"], memberNames?: Record<string, string>): { title: string; fields: FieldDef[] }[] {
   const prospect = type === "prospect";
   return [
     {
@@ -162,6 +163,24 @@ function folders(type: Contact["type"]): { title: string; fields: FieldDef[] }[]
     {
       title: "Pipeline",
       fields: [
+        {
+          key: "assignedTo",
+          label: "Assigned to",
+          text: (c) => (c.assignedToId && memberNames?.[c.assignedToId] ? memberNames[c.assignedToId] : "Unassigned"),
+          value: (c) => {
+            const name = c.assignedToId && memberNames?.[c.assignedToId] ? memberNames[c.assignedToId] : null;
+            return name ? (
+              <span className="inline-flex items-center gap-1.5 min-w-0">
+                <span className="w-4 h-4 rounded-md bg-[var(--ods-bg-tertiary)] text-[12px] font-semibold flex items-center justify-center shrink-0">
+                  {initials(name)}
+                </span>
+                <span className="truncate">{name}</span>
+              </span>
+            ) : (
+              <span className="text-[var(--ods-text-tertiary)]">Unassigned</span>
+            );
+          },
+        },
         { key: "outbound", label: "Outbound state", text: (c) => c.outboundState, value: (c) => c.outboundState },
         { key: "outboundLabel", label: "Outbound label", text: (c) => c.outboundLabel, value: (c) => c.outboundLabel },
         { key: "video", label: "Video", text: (c) => c.videoStatus, value: (c) => c.videoStatus },
@@ -193,11 +212,13 @@ export function ContactSidebar({
   const [closed, setClosed] = usePersistedState<string[]>("contact-closed-folders", []);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const { data: people } = usePeople(contact);
+  const { data: facets } = useContactFacets();
+  const memberNames = facets?.names?.member;
   const primary = people?.[0] ?? null;
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return folders(contact.type)
+    return folders(contact.type, memberNames)
       .map((g) => ({
         ...g,
         fields: g.fields.filter((f) => {
@@ -208,7 +229,7 @@ export function ContactSidebar({
         }),
       }))
       .filter((g) => g.fields.length > 0);
-  }, [contact, query, hideEmpty]);
+  }, [contact, query, hideEmpty, memberNames]);
 
   const toggleFolder = (title: string) => setClosed(closed.includes(title) ? closed.filter((t) => t !== title) : [...closed, title]);
 
@@ -240,6 +261,11 @@ export function ContactSidebar({
                   </>
                 ) : (
                   contact.niche || contact.company || "No industry"
+                )}
+                {contact.assignedToId && memberNames?.[contact.assignedToId] && (
+                  <span className="block mt-0.5 text-[12px] text-[var(--ods-text-secondary)] font-medium">
+                    Assigned to {memberNames[contact.assignedToId]}
+                  </span>
                 )}
               </div>
             </div>

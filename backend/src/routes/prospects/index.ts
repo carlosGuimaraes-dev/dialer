@@ -437,6 +437,10 @@ router.patch("/:id", async (req: AuthRequest, res) => {
       payload.campaignIdId = campaign_id || null;
     }
 
+    if (req.body.assignedToId !== undefined) {
+      payload.assignedToId = req.body.assignedToId || null;
+    }
+
     // Status changes follow the contact pipeline (packages/shared
     // contact-status): a move it does not allow is refused with the reason.
     if (status !== undefined || dnc) {

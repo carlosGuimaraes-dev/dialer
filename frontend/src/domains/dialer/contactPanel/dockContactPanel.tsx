@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Globe, Mail, MapPin, Phone, Star, X, type IconComponent } from "@/domains/ui/icons";
+import { ExternalLink, Globe, Mail, MapPin, Phone, Star, User, X, type IconComponent } from "@/domains/ui/icons";
 import { api } from "@/domains/api/client";
 import { buttonClass } from "@/domains/ui/button";
 import { Chip } from "@/domains/ui/chip";
@@ -9,6 +9,7 @@ import { LABEL, LINK } from "@/domains/ui/tokens";
 import { toContact, initials, type Contact } from "@/domains/contact/model";
 import { leadDetailKey } from "@/domains/contact/data";
 import { usePeople } from "@/domains/contact/people";
+import { useContactFacets } from "@/domains/contact/list";
 import { parseNotes } from "@/domains/contact/notes";
 import { useCallsForRecord } from "@/domains/calls/data";
 import { DispositionBadge } from "@/domains/calls/disposition";
@@ -109,6 +110,8 @@ export function DockContactPanel({ contactType, contactId, onClose }: { contactT
   const notes = useMemo(() => parseNotes(contact?.notes).slice(-3).reverse(), [contact?.notes]);
   const path = contactType === "lead" ? `/leads/${contactId}` : `/contacts/${contactId}`;
   const place = contact ? [contact.address, contact.city, contact.state].filter(Boolean).join(", ") : "";
+  const { data: facets } = useContactFacets();
+  const assigneeName = contact?.assignedToId ? facets?.names?.member?.[contact.assignedToId] ?? null : null;
 
   return (
     <div className="bg-[var(--ods-bg-primary)] rounded-[12px] shadow-[0_16px_40px_rgba(0,0,0,0.18)] w-full max-h-[calc(100vh-64px)] overflow-y-auto border border-[var(--ods-border)]">
@@ -149,6 +152,7 @@ export function DockContactPanel({ contactType, contactId, onClose }: { contactT
           <div className="px-4 py-2">
             {contact.phone && <Fact icon={Phone}><span className="tabular-nums">{[contact.phone, ...contact.extraPhones].join(", ")}</span></Fact>}
             {contact.email && <Fact icon={Mail}>{contact.email}</Fact>}
+            {assigneeName && <Fact icon={User}>Assigned to {assigneeName}</Fact>}
             {contact.website && (
               <Fact icon={Globe}>
                 <a href={contact.website} target="_blank" rel="noreferrer" className={LINK}>
