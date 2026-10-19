@@ -99,6 +99,7 @@ export function mapProspectListItem(prospect: AgencyProspect) {
     contact_count: 0,
     sync_id: prospect.externalId,
     createdByMemberId: prospect.createdByMemberId || null,
+    assignedToId: prospect.assignedToId || null,
     created_at: prospect.createdAt || new Date().toISOString(),
     updated_at: prospect.updatedAt || new Date().toISOString(),
   };
@@ -163,6 +164,7 @@ export function mapProspectDetail(prospect: AgencyProspect) {
     dnc: status === "not_interested" || status === "do_not_contact",
     sync_id: prospect.externalId,
     createdByMemberId: prospect.createdByMemberId || null,
+    assignedToId: prospect.assignedToId || null,
     created_at: prospect.createdAt || new Date().toISOString(),
     updated_at: prospect.updatedAt || new Date().toISOString(),
   };
@@ -197,6 +199,7 @@ export function mapProspectUpdateResult(prospect: AgencyProspect) {
     last_called_at: null,
     call_count: 0,
     createdByMemberId: prospect.createdByMemberId || null,
+    assignedToId: prospect.assignedToId || (typeof (prospect as any).assignedTo === 'string' ? (prospect as any).assignedTo : (prospect as any).assignedTo?.id) || null,
     created_at: prospect.createdAt || new Date().toISOString(),
     updated_at: prospect.updatedAt || new Date().toISOString(),
   };

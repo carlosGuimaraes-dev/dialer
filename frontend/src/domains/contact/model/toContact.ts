@@ -40,6 +40,8 @@ export function toContact(raw: any, type: ContactType): Contact {
     googleReviewsUrl: str(raw?.googleReviewsUrl),
     campaignId: str(raw?.campaign_id),
     notes: typeof raw?.notes === "string" ? raw.notes : null,
+    assignedToId: str(raw?.assignedToId) ?? str(raw?.assigned_to) ?? null,
+    createdByMemberId: str(raw?.createdByMemberId) ?? null,
     createdAt: str(raw?.created_at),
     updatedAt: str(raw?.updated_at),
   };

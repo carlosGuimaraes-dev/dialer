@@ -28,6 +28,8 @@ export interface ContactRow {
   niche?: string;
   campaign_id?: string | null;
   createdByMemberId?: string | null;
+  /** Workspace member the prospect is assigned to (prospects only). */
+  assignedToId?: string | null;
   created_at?: string;
   /** Most recent call to this contact. */
   lastCall: { id: string; status: string | null; at: string | null } | null;

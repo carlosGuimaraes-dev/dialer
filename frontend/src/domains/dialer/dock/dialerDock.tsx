@@ -49,7 +49,7 @@ import { usePowerDialer, contactDisplayName } from "@/domains/campaigns/powerDia
 import { usePersistedState } from "@/domains/app/persistedState";
 import { DEFAULT_UNANSWERED_TIMEOUT_SECONDS, UNANSWERED_TIMEOUT_CHOICES, getUnansweredTimeoutSeconds, setUnansweredTimeoutSeconds } from "@/domains/app/config";
 import { useCalls } from "@/domains/calls/data";
-import { contactsApi, contactName, useContactFacets, useProspectLookup, type ContactRow } from "@/domains/contact/list";
+import { contactsApi, contactName, memberOptions, resolveMember, useContactFacets, useProspectLookup, type ContactRow } from "@/domains/contact/list";
 import { lineCountry, lineRegion, pickCallLine } from "@/domains/dialer/route";
 import { DockContactPanel } from "@/domains/dialer/contactPanel";
 import { regionOfCountry } from "@dialer/shared";
@@ -677,13 +677,14 @@ function ContactsTab() {
       .map(([raw, n]) => ({ value: raw, label: label(raw), hint: n })),
     ...(counts?.__blank ? [{ value: "__blank", label: none, hint: counts.__blank }] : []),
   ];
-  const memberName = (id: string) => facets?.names?.member?.[id] ?? "Unknown member";
-  const assignedOptions: DockFilterOption[] = [
-    ...(me ? [{ value: "__me", label: "Me", icon: <User className="w-3.5 h-3.5" />, hint: facets?.assignedTo?.[me] ?? 0 }] : []),
-    ...namedOptions(facets?.assignedTo, memberName, "Unassigned"),
-  ];
+  // Every workspace member, not only the ones who already have prospects, so anyone can be picked.
+  const assignedOptions: DockFilterOption[] = memberOptions(facets?.names?.member, facets?.assignedTo, me).map((o) => ({
+    value: o.value,
+    label: o.label,
+    hint: o.count,
+    ...(o.isMe ? { icon: <User className="w-3.5 h-3.5" /> } : {}),
+  }));
   const extra: Array<[keyof DockFilters, string, DockFilterOption[]]> = [
-    ["assignedTo", "Assigned to", assignedOptions],
     ["campaign", "Campaign", namedOptions(facets?.campaign, (id) => facets?.names?.campaign?.[id] ?? "Unknown campaign", "No campaign")],
     ["leadSource", "Lead source", namedOptions(facets?.leadSource, optionLabel, "No lead source")],
     ["offer", "Offer", namedOptions(facets?.offer, optionLabel, "No offer")],
@@ -705,7 +706,7 @@ function ContactsTab() {
     state: f.state !== "all" ? [f.state] : undefined,
     city: f.city !== "all" ? [f.city] : undefined,
     campaign: f.campaign !== "all" ? [f.campaign] : undefined,
-    assignedTo: f.assignedTo === "all" ? undefined : [f.assignedTo === "__me" ? (me ?? "__blank") : f.assignedTo],
+    assignedTo: f.assignedTo === "all" ? undefined : [resolveMember(f.assignedTo, me)],
     leadSource: f.leadSource !== "all" ? [f.leadSource] : undefined,
     offer: f.offer !== "all" ? [f.offer] : undefined,
   };
@@ -727,6 +728,7 @@ function ContactsTab() {
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <DockFilter label="Country" value={f.country} options={countryOptions} onChange={(v) => set({ country: v })} />
           <DockFilter label="Status" value={f.status} options={statusOptions} onChange={(v) => set({ status: v })} />
+          <DockFilter label="Assigned" value={f.assignedTo} options={assignedOptions} onChange={(v) => set({ assignedTo: v })} />
           <DockFilter label="Last call" value={f.lastCall} options={lastCallOptions} onChange={(v) => set({ lastCall: v })} />
           <button
             onClick={() => setMore(!more)}
@@ -774,7 +776,11 @@ function ContactsTab() {
               icon={Phone}
               iconClass={r.phone ? "text-emerald-600" : "text-[var(--ods-text-tertiary)]"}
               title={name}
-              meta={[r.phone || "No number", r.company].filter(Boolean).join(" · ")}
+              meta={[
+                r.phone || "No number",
+                r.company,
+                r.assignedToId && facets?.names?.member?.[r.assignedToId] ? `Assigned to ${facets.names.member[r.assignedToId]}` : null,
+              ].filter(Boolean).join(" · ")}
               onClick={() =>
                 r.phone &&
                 void dial({ contactType: r.type, contactId: r.id, phone: r.phone, name, campaignId: (r.campaign_id as string | null) ?? null, country: (r.country as string | undefined) ?? null })

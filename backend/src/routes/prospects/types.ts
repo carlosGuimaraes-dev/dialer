@@ -36,6 +36,8 @@ export interface AgencyProspect {
   qualificationStatus?: string | { value?: string; label?: string } | null;
   /** WorkspaceMember UUID responsible for the prospect (our attribution, server-derived). */
   createdByMemberId?: string;
+  /** Workspace member the prospect is assigned to (Twenty relation id). */
+  assignedToId?: string | null;
   campaignIdId?: string; // Relation to agencyCampaign
   createdAt?: string;
   updatedAt?: string;
