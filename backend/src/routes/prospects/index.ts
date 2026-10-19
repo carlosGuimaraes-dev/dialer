@@ -3,6 +3,7 @@ import { authMiddleware, AuthRequest } from "../../middleware/auth.js";
 import { listTwenty, listTwentyAll, createTwenty, updateTwenty, deleteTwenty, getTwenty, fetchTwenty } from "../../lib/twenty/client/index.js";
 import { twentyGraphqlClient } from "../../lib/twenty/graphql/index.js";
 import { contactTypes, idList } from "./helpers/query.js";
+import { realText } from "./helpers/placeholders.js";
 import { leadGqlQuery, pageWindow, prospectGqlQuery, type IdScope } from "./helpers/queryGql.js";
 import { lastCallIndex, NEVER_CALLED, outcomeCounts } from "../../lib/twenty/lastCall/index.js";
 import { mapLeadToFrontend } from "../leads/helpers/index.js";
@@ -210,6 +211,8 @@ router.get("/facets", async (_req, res) => {
       const out: Record<string, number> = {};
       for (const g of r?.agencyProspectsGroupBy ?? []) {
         const key = g?.groupByDimensionValues?.[0];
+        // Import placeholders ("unknown") are not a value anyone filters by: leave them out of the menus.
+        if (typeof key === "string" && key !== "" && realText(key) === undefined) continue;
         out[key === null || key === undefined || key === "" ? "__blank" : String(key)] = g.totalCount ?? 0;
       }
       return out;
