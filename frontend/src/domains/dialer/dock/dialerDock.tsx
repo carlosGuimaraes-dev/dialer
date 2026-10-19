@@ -688,7 +688,6 @@ function ContactsTab() {
     ["campaign", "Campaign", namedOptions(facets?.campaign, (id) => facets?.names?.campaign?.[id] ?? "Unknown campaign", "No campaign")],
     ["leadSource", "Lead source", namedOptions(facets?.leadSource, optionLabel, "No lead source")],
     ["offer", "Offer", namedOptions(facets?.offer, optionLabel, "No offer")],
-    ["type", "Type", typeOptions],
     ["industry", "Industry", valueOptions(facets?.industry)],
     ["state", "State", valueOptions(facets?.state)],
     ["city", "City", valueOptions(facets?.city)],
@@ -728,6 +727,7 @@ function ContactsTab() {
         <div className="flex flex-wrap items-center gap-1.5 min-w-0">
           <DockFilter label="Country" value={f.country} options={countryOptions} onChange={(v) => set({ country: v })} />
           <DockFilter label="Status" value={f.status} options={statusOptions} onChange={(v) => set({ status: v })} />
+          <DockFilter label="Type" value={f.type} options={typeOptions} onChange={(v) => set({ type: v })} />
           <DockFilter label="Assigned" value={f.assignedTo} options={assignedOptions} onChange={(v) => set({ assignedTo: v })} />
           <DockFilter label="Last call" value={f.lastCall} options={lastCallOptions} onChange={(v) => set({ lastCall: v })} />
           <button
