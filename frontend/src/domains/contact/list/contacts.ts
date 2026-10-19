@@ -11,10 +11,15 @@ import { useOptimisticDelete, useOptimisticUpdate } from "@/domains/api/optimist
  */
 
 export type ContactType = "prospect" | "lead";
+/**
+ * A row in the Contacts table: a prospect, a lead, or a person (agencyPerson, a decision maker at a prospect).
+ * People are opt-in (Type -> People); a person row carries its company's prospectId, where calls and campaigns live.
+ */
+export type ContactRowType = ContactType | "person";
 
 export interface ContactRow {
   id: string;
-  type: ContactType;
+  type: ContactRowType;
   first_name?: string;
   last_name?: string;
   company?: string;
@@ -30,6 +35,9 @@ export interface ContactRow {
   createdByMemberId?: string | null;
   /** Workspace member the prospect is assigned to (prospects only). */
   assignedToId?: string | null;
+  /** People: their company (agencyProspect) and job title. */
+  prospectId?: string | null;
+  jobTitle?: string | null;
   created_at?: string;
   /** Most recent call to this contact. */
   lastCall: { id: string; status: string | null; at: string | null } | null;
@@ -40,12 +48,12 @@ export interface ContactPage {
   offset: number;
   rows: ContactRow[];
   totalCount: number | null;
-  counts: Record<ContactType, number>;
+  counts: Record<ContactType, number> & { person?: number };
 }
 
 export interface ContactFacets {
   total: number;
-  type: Record<ContactType, number>;
+  type: Record<ContactType, number> & { person?: number };
   /** Twenty coldCallStatus -> count ("__blank" = no status, shown as New). */
   status: Record<string, number>;
   /** Raw country value -> count. */
@@ -73,7 +81,7 @@ export interface ContactFacets {
 
 export interface ContactQuery {
   q?: string;
-  type?: ContactType[];
+  type?: ContactRowType[];
   status?: string[];
   /** Raw country values (several spellings of one country). */
   country?: string[];

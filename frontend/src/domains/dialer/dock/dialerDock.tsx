@@ -668,6 +668,8 @@ function ContactsTab() {
   const typeOptions: DockFilterOption[] = [
     { value: "prospect", label: "Prospects", hint: facets?.type?.prospect },
     { value: "lead", label: "Leads", hint: facets?.type?.lead },
+    // Decision makers (agencyPeople): dialled on their own line, logged on their company.
+    { value: "person", label: "People", hint: facets?.type?.person },
   ];
   // Id- and option-valued filters, with "none" for records that have no value.
   const namedOptions = (counts: Record<string, number> | undefined, label: (raw: string) => string, none: string): DockFilterOption[] => [
@@ -700,7 +702,7 @@ function ContactsTab() {
     country: countryRaws?.length ? countryRaws : undefined,
     status: f.status !== "all" ? [f.status] : undefined,
     lastCall: f.lastCall !== "all" ? f.lastCall : undefined,
-    type: f.type !== "all" ? [f.type as "prospect" | "lead"] : undefined,
+    type: f.type !== "all" ? [f.type as "prospect" | "lead" | "person"] : undefined,
     industry: f.industry !== "all" ? [f.industry] : undefined,
     state: f.state !== "all" ? [f.state] : undefined,
     city: f.city !== "all" ? [f.city] : undefined,
@@ -768,6 +770,8 @@ function ContactsTab() {
       ) : (
         rows.map((r) => {
           const name = contactName(r) ?? "Unknown";
+          // A person is called, shown and opened as their company: that is where calls and history are kept.
+          const record = r.type === "person" ? (r.prospectId ? { type: "prospect" as const, id: r.prospectId } : null) : { type: r.type, id: r.id };
           const route = r.phone ? pickCallLine(lines, line, { number: r.phone, country: r.country as string | undefined }) : null;
           const toName = route?.toName ?? "";
           return (
@@ -778,26 +782,28 @@ function ContactsTab() {
               title={name}
               meta={[
                 r.phone || "No number",
-                r.company,
+                r.type === "person" ? [r.jobTitle, r.company].filter(Boolean).join(" at ") : r.company,
                 r.assignedToId && facets?.names?.member?.[r.assignedToId] ? `Assigned to ${facets.names.member[r.assignedToId]}` : null,
               ].filter(Boolean).join(" · ")}
               onClick={() =>
                 r.phone &&
-                void dial({ contactType: r.type, contactId: r.id, phone: r.phone, name, campaignId: (r.campaign_id as string | null) ?? null, country: (r.country as string | undefined) ?? null })
+                record &&
+                void dial({ contactType: record.type, contactId: record.id, phone: r.phone, name, campaignId: (r.campaign_id as string | null) ?? null, country: (r.country as string | undefined) ?? null })
               }
               trailing={
                 <span className="flex items-center gap-1.5 shrink-0">
                   <button
-                    onClick={() => contactSide.toggle(r.type, r.id)}
-                    aria-pressed={contactSide.isShown(r.id)}
+                    onClick={() => record && contactSide.toggle(record.type, record.id)}
+                    disabled={!record}
+                    aria-pressed={!!record && contactSide.isShown(record.id)}
                     title="Show the details beside the dialer"
                     aria-label={`Show ${name} beside the dialer`}
-                    className={`${BTN_ICON} ${contactSide.isShown(r.id) ? "text-[var(--ods-brand-600)]" : "opacity-0 group-hover:opacity-100 focus:opacity-100"}`}
+                    className={`${BTN_ICON} ${record && contactSide.isShown(record.id) ? "text-[var(--ods-brand-600)]" : "opacity-0 group-hover:opacity-100 focus:opacity-100"}`}
                   >
                     <User className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => navigate(r.type === "lead" ? `/leads/${r.id}` : `/contacts/${r.id}`)}
+                    onClick={() => record && navigate(record.type === "lead" ? `/leads/${record.id}` : `/contacts/${record.id}`)}
                     title="Open contact"
                     aria-label={`Open ${name}`}
                     className={`${BTN_ICON} opacity-0 group-hover:opacity-100 focus:opacity-100`}

@@ -15,10 +15,14 @@ function list(raw: unknown): string[] {
 }
 
 /** Contact type filter: "prospect", "lead" or both. */
-export function contactTypes(raw: unknown): { prospects: boolean; leads: boolean } {
+/**
+ * Which kinds of contact a table query covers. People (agencyPeople, the decision makers at a prospect) are opt-in:
+ * every person already belongs to a prospect in the list, so they only show when the Type filter asks for them.
+ */
+export function contactTypes(raw: unknown): { prospects: boolean; leads: boolean; people: boolean } {
   const types = list(raw).map((t) => t.toLowerCase());
-  if (types.length === 0) return { prospects: true, leads: true };
-  return { prospects: types.includes("prospect"), leads: types.includes("lead") };
+  if (types.length === 0) return { prospects: true, leads: true, people: false };
+  return { prospects: types.includes("prospect"), leads: types.includes("lead"), people: types.includes("person") };
 }
 
 /** Validated ids for a lookup, at most 200. */

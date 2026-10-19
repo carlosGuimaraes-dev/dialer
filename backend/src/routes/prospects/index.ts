@@ -4,7 +4,8 @@ import { listTwenty, listTwentyAll, createTwenty, updateTwenty, deleteTwenty, ge
 import { twentyGraphqlClient } from "../../lib/twenty/graphql/index.js";
 import { contactTypes, idList } from "./helpers/query.js";
 import { realText } from "./helpers/placeholders.js";
-import { leadGqlQuery, pageWindow, prospectGqlQuery, type IdScope } from "./helpers/queryGql.js";
+import { hasCompanyFilter, leadGqlQuery, pageWindow, personGqlQuery, prospectGqlQuery, type IdScope } from "./helpers/queryGql.js";
+import { mapPersonListItem } from "./helpers/mapPersonRow.js";
 import { lastCallIndex, NEVER_CALLED, outcomeCounts } from "../../lib/twenty/lastCall/index.js";
 import { mapLeadToFrontend } from "../leads/helpers/index.js";
 import { guardContactStatus } from "../../lib/pipelines/index.js";
@@ -113,14 +114,40 @@ router.get("/page", async (req, res) => {
       if (lastCall === NEVER_CALLED) scope = { notIn: [...index.keys()] };
       else {
         const ids = [...index.entries()].filter(([, outcome]) => outcome === lastCall).map(([id]) => id);
-        if (ids.length === 0) return res.json({ offset, rows: [], totalCount: 0, counts: { prospect: 0, lead: 0 } });
+        if (ids.length === 0) return res.json({ offset, rows: [], totalCount: 0, counts: { prospect: 0, lead: 0, person: 0 } });
         scope = { in: ids };
       }
     }
     const pq = types.prospects ? prospectGqlQuery(params, scope) : null;
     const lq = types.leads ? leadGqlQuery(params, scope) : null;
 
-    const fetchSlice = async (object: "agencyProspects" | "agencyLeads", q: { filter?: unknown; orderBy: unknown }, node: object, first: number, skip: number) => {
+    // People (decision makers): company filters (assignee, country, status, last call...) match through the
+    // person's prospect, so first collect the prospects that pass them.
+    let peq: ReturnType<typeof personGqlQuery> | null = null;
+    if (types.people) {
+      let prospectIds: string[] | undefined;
+      if (hasCompanyFilter(params) || scope) {
+        const companyQ = prospectGqlQuery(params, scope);
+        prospectIds = [];
+        let after: string | undefined;
+        for (let page = 0; page < 25; page++) {
+          const r: any = await client.query({
+            agencyProspects: {
+              __args: { first: 200, ...(after ? { after } : {}), ...(companyQ.filter ? { filter: companyQ.filter } : {}) },
+              edges: { node: { id: true } },
+              pageInfo: { hasNextPage: true, endCursor: true },
+            },
+          });
+          prospectIds.push(...(r?.agencyProspects?.edges ?? []).map((e: any) => e.node.id as string));
+          if (!r?.agencyProspects?.pageInfo?.hasNextPage) break;
+          after = r.agencyProspects.pageInfo.endCursor;
+        }
+      }
+      peq = prospectIds && prospectIds.length === 0 ? null : personGqlQuery(params, prospectIds);
+    }
+    const PERSON_NODE = { __scalar: true, phones: { __scalar: true }, emails: { __scalar: true } };
+
+    const fetchSlice = async (object: "agencyProspects" | "agencyLeads" | "agencyPeople", q: { filter?: unknown; orderBy: unknown }, node: object, first: number, skip: number) => {
       const r: any = await client.query({
         [object]: { __args: { first: Math.max(1, first), offset: skip, orderBy: q.orderBy, ...(q.filter ? { filter: q.filter } : {}) }, totalCount: true, edges: { node } },
       });
@@ -128,7 +155,7 @@ router.get("/page", async (req, res) => {
     };
 
     // Totals first (1-row queries), so the table can size its scroll area.
-    const [pTotal, lTotal] = await Promise.all([
+    const [pTotal, lTotal, peTotal] = await Promise.all([
       pq ? fetchSlice("agencyProspects", pq, { id: true }, 1, 0).then((r) => r.total) : Promise.resolve(0),
       // Leads are a bonus to the prospect list: if Twenty rejects the lead query, show prospects alone.
       lq
@@ -139,11 +166,13 @@ router.get("/page", async (req, res) => {
               return 0;
             })
         : Promise.resolve(0),
+      peq ? fetchSlice("agencyPeople", peq, { id: true }, 1, 0).then((r) => r.total) : Promise.resolve(0),
     ]);
 
     const sources = [
       pq && pTotal > 0 ? { object: "agencyProspects" as const, q: pq, node: PROSPECT_NODE, total: pTotal, type: "prospect", map: mapProspectListItem } : null,
       lq && lTotal > 0 ? { object: "agencyLeads" as const, q: lq, node: LEAD_NODE, total: lTotal, type: "lead", map: (r: any) => mapLeadToFrontend(r) } : null,
+      peq && peTotal > 0 ? { object: "agencyPeople" as const, q: peq, node: PERSON_NODE, total: peTotal, type: "person", map: mapPersonListItem } : null,
     ].filter((x): x is NonNullable<typeof x> => !!x);
     if (params.sort === "contact_type" && params.dir === "desc") sources.reverse();
 
@@ -161,8 +190,28 @@ router.get("/page", async (req, res) => {
       skip = 0;
     }
 
-    // Last call per contact in this window: one request, not per row.
-    const prospectIds = rows.filter((r) => r.type === "prospect").map((r) => r.id);
+    // A person shows their company: its name, place, status, assignee and campaign (one request for the window).
+    const companyOf = new Map<string, any>();
+    const personCompanies = [...new Set(rows.filter((r) => r.type === "person" && r.prospectId).map((r) => r.prospectId as string))];
+    if (personCompanies.length) {
+      try {
+        const r: any = await client.query({
+          agencyProspects: { __args: { first: personCompanies.length, filter: { id: { in: personCompanies } } }, edges: { node: PROSPECT_NODE } },
+        });
+        for (const e of r?.agencyProspects?.edges ?? []) companyOf.set(e.node.id, mapProspectListItem(e.node));
+      } catch (err: any) {
+        log.info(`Company lookup for people skipped: ${err.message}`);
+      }
+      rows = rows.map((r) => {
+        const c = r.type === "person" ? companyOf.get(r.prospectId) : null;
+        if (!c) return r;
+        const company = [c.first_name, c.last_name].filter(Boolean).join(" ");
+        return { ...r, company: company || r.company, niche: c.niche, country: c.country, state: c.state, city: c.city, status: c.status, assignedToId: c.assignedToId ?? null, campaign_id: c.campaign_id ?? null };
+      });
+    }
+
+    // Last call per contact in this window: one request, not per row. A person's calls are logged on their company.
+    const prospectIds = [...new Set([...rows.filter((r) => r.type === "prospect").map((r) => r.id), ...personCompanies])];
     const leadIds = rows.filter((r) => r.type === "lead").map((r) => r.id);
     const last = new Map<string, { id: string; status: string | null; at: string | null }>();
     const clauses = [
@@ -186,9 +235,9 @@ router.get("/page", async (req, res) => {
 
     res.json({
       offset,
-      rows: rows.map((r) => ({ ...r, lastCall: last.get(r.id) ?? null })),
-      totalCount: pTotal + lTotal,
-      counts: { prospect: pTotal, lead: lTotal },
+      rows: rows.map((r) => ({ ...r, lastCall: last.get(r.type === "person" ? r.prospectId : r.id) ?? null })),
+      totalCount: pTotal + lTotal + peTotal,
+      counts: { prospect: pTotal, lead: lTotal, person: peTotal },
     });
   } catch (err: any) {
     log.error("Failed to page contacts:", err.message);
@@ -246,11 +295,14 @@ router.get("/facets", async (_req, res) => {
     const creator = Object.entries(creators).reduce((sum, [k, n]) => (k === "__blank" ? sum : sum + n), 0);
     const total = Object.values(country).reduce((a, b) => a + b, 0);
     const leadsBody: any = await fetchTwenty("agencyLeads", { limit: 1 });
+    // People are opt-in in the table (Type -> People), so they count in the Type menu but not in the total.
+    const peopleBody: any = await fetchTwenty("agencyPeople", { limit: 1 }).catch(() => null);
+    const people = typeof peopleBody?.totalCount === "number" ? peopleBody.totalCount : 0;
     const leads = typeof leadsBody?.totalCount === "number" ? leadsBody.totalCount : 0;
     const lastCall = last ? { ...outcomeCounts(last), [NEVER_CALLED]: Math.max(0, total + leads - last.size) } : {};
     res.json({
       total: total + leads,
-      type: { prospect: total, lead: leads },
+      type: { prospect: total, lead: leads, person: people },
       status,
       country,
       industry,

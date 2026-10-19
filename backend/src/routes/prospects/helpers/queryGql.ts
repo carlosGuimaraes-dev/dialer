@@ -162,6 +162,33 @@ export function leadGqlQuery(params: Record<string, unknown>, scope?: IdScope) {
   return { filter: combine(parts), orderBy: orderBy(params, LEAD_SORT) };
 }
 
+// agencyPerson has a name, a job title and phones; everything else belongs to its prospect.
+const PERSON_SORT: Record<string, string> = { name: "name", created: "createdAt" };
+
+/** Filters that describe a person's company: people are matched through their prospect. */
+const COMPANY_FILTERS = ["status", "country", "industry", "company", "state", "city", "assignedTo", "leadSource", "offer", "campaign"];
+
+/** True when the query filters on something only the person's prospect has (assignee, country, status...). */
+export function hasCompanyFilter(params: Record<string, unknown>): boolean {
+  return COMPANY_FILTERS.some((k) => list(params[k]).length > 0);
+}
+
+/**
+ * People (agencyPeople). Search, name and phone match the person; company filters arrive as the ids of the prospects
+ * that passed them (`prospectIds`, resolved by the route), so "People assigned to me in PA" works like any other type.
+ */
+export function personGqlQuery(params: Record<string, unknown>, prospectIds?: string[]) {
+  const parts: Filter[] = [];
+  const text = typeof params.q === "string" ? params.q.trim().slice(0, 120) : "";
+  if (text) parts.push({ or: ["name", "jobTitle"].map((f) => ({ [f]: { ilike: `%${text}%` } })) });
+  const name = contains(params.name);
+  if (name) parts.push({ name: { ilike: `%${name}%` } });
+  const phone = contains(params.phone);
+  if (phone) parts.push({ phones: { primaryPhoneNumber: { ilike: `%${phone}%` } } });
+  if (prospectIds) parts.push({ prospectId: { in: prospectIds } });
+  return { filter: combine(parts), orderBy: orderBy(params, PERSON_SORT) };
+}
+
 /** Window requested by the table: offset 0..∞, limit 1..200. */
 export function pageWindow(params: Record<string, unknown>) {
   const offset = Math.max(0, Number.parseInt(String(params.offset ?? "0"), 10) || 0);
