@@ -83,3 +83,29 @@ test("a contact's history names its texts and says why one failed", () => {
   assert.equal(rows[1].after.kind === "option" && rows[1].after.text, "Not delivered");
   assert.equal(rows[0].after.kind, "option");
 });
+
+test("member fields name the person, not the id", () => {
+  const rows = historyRows({
+    members: { "b999": "Matthew Don", "5ecd": "Matthew" },
+    activities: [
+      {
+        id: "e2", happensAt: "2026-10-19T14:27:00Z", action: "updated", object: "prospect", recordId: "p", recordName: null,
+        actor: { name: null, memberId: null, source: "API" },
+        changes: [
+          // Twenty records the relation as { id }, the dialer's owner field as a bare id.
+          { field: "assignedTo", before: { id: "b999" }, after: { id: "5ecd" } },
+          { field: "createdByMemberId", before: null, after: "5ecd" },
+          { field: "assignedById", before: null, after: "gone" },
+        ],
+      },
+    ],
+  }, {}, "Prospect");
+  assert.deepEqual(
+    rows.map((r) => [r.label, text(r.before), text(r.after)]),
+    [
+      ["Assigned to", "Matthew Don", "Matthew"],
+      ["Owner", "blank", "Matthew"],
+      ["Assigned by", "blank", "Unknown member"],
+    ],
+  );
+});

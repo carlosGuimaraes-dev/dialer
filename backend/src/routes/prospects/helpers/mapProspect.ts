@@ -1,6 +1,7 @@
 import type { AgencyProspect } from "../types.js";
 import { additionalPhones } from "../../../lib/twenty/contactValues/index.js";
 import { selectValue } from "./selectValue.js";
+import { withoutPlaceholders } from "./placeholders.js";
 
 // Status mappings. Pure data.
 const STATUS_MAP: Record<string, string> = {
@@ -26,7 +27,9 @@ export function frontendStatusToTwenty(status: string | undefined, dnc: unknown)
 }
 
 /** AgencyProspect -> frontend list shape. Pure. */
-export function mapProspectListItem(prospect: AgencyProspect) {
+export function mapProspectListItem(raw: AgencyProspect) {
+  // Import placeholders ("unknown", uniqueness tags) are not real data: never show or dial them.
+  const prospect = withoutPlaceholders(raw);
   // Parse name into first_name / last_name
   const fullName = prospect.name || "";
   const nameParts = fullName.split(" ");
@@ -106,7 +109,9 @@ export function mapProspectListItem(prospect: AgencyProspect) {
 }
 
 /** AgencyProspect -> frontend detail shape. Pure. */
-export function mapProspectDetail(prospect: AgencyProspect) {
+export function mapProspectDetail(raw: AgencyProspect) {
+  // Import placeholders ("unknown", uniqueness tags) are not real data: never show or dial them.
+  const prospect = withoutPlaceholders(raw);
   const addressParts = (prospect.fullAddress || "").split(",").map(p => p.trim());
   const fullName = prospect.name || "";
   const nameParts = fullName.split(" ");
@@ -171,7 +176,9 @@ export function mapProspectDetail(prospect: AgencyProspect) {
 }
 
 /** Updated AgencyProspect -> frontend shape (PATCH response). Pure. */
-export function mapProspectUpdateResult(prospect: AgencyProspect) {
+export function mapProspectUpdateResult(raw: AgencyProspect) {
+  // Import placeholders ("unknown", uniqueness tags) are not real data: never show or dial them.
+  const prospect = withoutPlaceholders(raw);
   const mappedStatus = prospect.coldCallStatus
     ? STATUS_MAP[prospect.coldCallStatus] || "new"
     : "new";

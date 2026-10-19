@@ -38,6 +38,11 @@ const LABELS: Record<string, string> = {
   logoUrl: "Logo",
   brandColors: "Brand colours",
   campaignIdId: "Campaign",
+  assignedTo: "Assigned to",
+  assignedToId: "Assigned to",
+  assignedBy: "Assigned by",
+  assignedById: "Assigned by",
+  createdByMemberId: "Owner",
   campaignId: "Campaign",
   phone: "Phone",
   phones: "Phone",
@@ -191,6 +196,19 @@ export function displayValue(field: string, value: unknown, options: FieldOption
   return { kind: "text", text: raw };
 }
 
+/**
+ * Fields that hold a workspace member: Twenty records relations as { id } and the dialer's own owner field as a bare
+ * id, so without this history reads "ID: b999a26c-..." instead of the person.
+ */
+const MEMBER_FIELDS = new Set(["assignedTo", "assignedToId", "assignedBy", "assignedById", "createdByMemberId", "workspaceMember", "workspaceMemberId"]);
+
+/** A member field's value as the member's name ("Unknown member" when the id is not in the workspace). */
+export function displayMember(value: unknown, members: Record<string, string>): Display {
+  const id = typeof value === "string" ? value.trim() : value && typeof value === "object" ? String((value as { id?: unknown }).id ?? "").trim() : "";
+  if (!id) return { kind: "blank" };
+  return { kind: "text", text: members[id] ?? "Unknown member" };
+}
+
 /** Plain-text form of a display value, for titles and search. */
 export function text(d: Display): string {
   switch (d.kind) {
@@ -318,8 +336,9 @@ export function historyRows(
           continue;
         }
       }
-      const before = displayValue(c.field, c.before, options);
-      const after = displayValue(c.field, c.after, options);
+      const members = data?.members ?? {};
+      const before = MEMBER_FIELDS.has(c.field) ? displayMember(c.before, members) : displayValue(c.field, c.before, options);
+      const after = MEMBER_FIELDS.has(c.field) ? displayMember(c.after, members) : displayValue(c.field, c.after, options);
       if (before.kind !== "blank" && after.kind !== "blank" && text(before) === text(after)) continue;
       const kind: RowKind = before.kind === "blank" ? "set" : after.kind === "blank" ? "cleared" : "changed";
       if (kind === "set" && after.kind === "blank") continue;
