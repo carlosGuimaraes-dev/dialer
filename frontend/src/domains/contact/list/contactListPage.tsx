@@ -34,6 +34,7 @@ import {
   useUpdateContact,
   type ContactQuery,
   type ContactRow,
+  type ContactRowType,
   type ContactType,
 } from "./contacts";
 
@@ -67,9 +68,11 @@ const TWENTY_STATUS: Record<string, string> = {
   DO_NOT_CONTACT: "do_not_contact",
 };
 
-const TYPE_META: Record<ContactType, { label: string; icon: typeof Users; color: string }> = {
+const TYPE_META: Record<ContactRowType, { label: string; icon: typeof Users; color: string }> = {
   prospect: { label: "Prospect", icon: Users, color: "text-blue-600" },
   lead: { label: "Lead", icon: User, color: "text-violet-600" },
+  // A decision maker (agencyPerson) at a prospect: shown with their company, dialled on their own line.
+  person: { label: "Person", icon: User, color: "text-emerald-600" },
 };
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -136,7 +139,7 @@ export function ProspectPage() {
     .sort((a, b) => b[1].count - a[1].count)
     .map(([key, g]) => option(key, key === BLANK ? "Unknown" : countryName(key), <CountryFlag code={key === BLANK ? null : countryCode(key)} />, g.count));
 
-  const typeOptions = (Object.keys(TYPE_META) as ContactType[]).map((t) => {
+  const typeOptions = (Object.keys(TYPE_META) as ContactRowType[]).map((t) => {
     const Icon = TYPE_META[t].icon;
     return option(t, TYPE_META[t].label, <Icon className={`w-4 h-4 ${TYPE_META[t].color}`} />, facets?.type?.[t] ?? 0);
   });
@@ -197,7 +200,7 @@ export function ProspectPage() {
     q: search || undefined,
     status: active.status !== ALL ? [active.status] : undefined,
     country: active.country !== ALL ? countryGroups.get(active.country)?.raws : undefined,
-    type: active.contact_type !== ALL ? [active.contact_type as ContactType] : undefined,
+    type: active.contact_type !== ALL ? [active.contact_type as ContactRowType] : undefined,
     assignedTo: active.assigned_to !== ALL ? [resolveMember(active.assigned_to, me)] : undefined,
     industry: active.industry !== ALL ? [active.industry] : undefined,
     company: active.company !== ALL ? [active.company] : undefined,
@@ -219,7 +222,7 @@ export function ProspectPage() {
   const updateProspect = useUpdateContact("prospect");
   const updateLead = useUpdateContact("lead");
   const [showForm, setShowForm] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; type: ContactType } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; type: ContactRowType } | null>(null);
   const [syncing, setSyncing] = useState(false);
   // Call campaigns (WAVV-style): the phone button opens them; with contacts
   // selected it first creates a campaign from the selection.
@@ -237,7 +240,12 @@ export function ProspectPage() {
   const typeOf = useMemo(() => new Map(rows.map((r) => [r.id, r.type])), [rows]);
 
   async function removeContacts(ids: string[]) {
-    await Promise.all(ids.map((id) => (typeOf.get(id) === "lead" ? api.leads.delete(id) : api.prospects.delete(id))));
+    await Promise.all(
+      ids.map((id) => {
+        const t = typeOf.get(id);
+        return t === "lead" ? api.leads.delete(id) : t === "person" ? api.people.delete(id) : api.prospects.delete(id);
+      }),
+    );
     await refresh();
   }
 
@@ -255,8 +263,12 @@ export function ProspectPage() {
 
   async function handleStatusChange(row: ContactRow, newStatus: string) {
     try {
-      await (row.type === "lead" ? updateLead : updateProspect).mutateAsync({ id: row.id, patch: { status: newStatus } });
+      // A person's status is their company's pipeline status.
+      const id = row.type === "person" ? row.prospectId : row.id;
+      if (!id) return;
+      await (row.type === "lead" ? updateLead : updateProspect).mutateAsync({ id, patch: { status: newStatus } });
       queryClient.invalidateQueries({ queryKey: ["contacts-facets"] });
+      if (row.type === "person") queryClient.invalidateQueries({ queryKey: ["contacts-page"] });
     } catch (err) {
       // The change was rolled back; a pipeline refusal (409) says why.
       toastError("Status not saved", describeError(err).detail);
@@ -287,7 +299,9 @@ export function ProspectPage() {
 
   /** Selected prospects -> new campaign named after the current date and time, shown in the campaign window. */
   async function startCampaignFrom(ids: string[], clearSelection: () => void) {
-    const prospectIds = ids.filter((id) => typeOf.get(id) !== "lead");
+    // Campaigns dial prospects: a selected person brings in their company.
+    const companyOf = new Map(rows.filter((r) => r.type === "person").map((r) => [r.id, r.prospectId ?? null]));
+    const prospectIds = [...new Set(ids.map((id) => (typeOf.get(id) === "person" ? companyOf.get(id) : typeOf.get(id) === "lead" ? null : id)).filter((x): x is string => !!x))];
     if (prospectIds.length === 0) {
       toastWarning("No prospects selected", "Call campaigns dial prospects; leads can be called from their own page.");
       return;
@@ -296,7 +310,8 @@ export function ProspectPage() {
       const created = await createCampaign.mutateAsync({ contactIds: prospectIds, name: defaultCampaignName() });
       clearSelection();
       setCampaignModal({ open: true, campaignId: created.id });
-      if (prospectIds.length < ids.length) success("Campaign created", `${ids.length - prospectIds.length} lead(s) were left out; campaigns dial prospects.`);
+      const leadsLeft = ids.filter((id) => typeOf.get(id) === "lead").length;
+      if (leadsLeft) success("Campaign created", `${leadsLeft} lead(s) were left out; campaigns dial prospects.`);
     } catch (err) {
       toastError("Campaign not created", describeError(err).detail);
     }
@@ -308,7 +323,9 @@ export function ProspectPage() {
     powerDialer.start(campaign);
   }
 
-  const open = (r: ContactRow) => navigate(r.type === "lead" ? `/leads/${r.id}` : `/contacts/${r.id}`);
+  // A person opens their company, where the People tab lists them.
+  const open = (r: ContactRow) =>
+    navigate(r.type === "lead" ? `/leads/${r.id}` : r.type === "person" ? (r.prospectId ? `/contacts/${r.prospectId}` : "/contacts") : `/contacts/${r.id}`);
   const fieldLink = (key: string) => <TwentyFieldLink objectName="agencyProspects" fieldName={PROSPECT_FIELD_FOR_KEY[key] ?? null} />;
   const statusLabel = (value?: string) => statusOptions.find((o) => o.value === value)?.label ?? value;
 
@@ -400,7 +417,7 @@ export function ProspectPage() {
       label: "Industry",
       type: "badge",
       width: 140,
-      value: (r) => (r.type === "prospect" ? (r.niche as string | undefined) ?? r.source : r.source),
+      value: (r) => (r.type === "lead" ? r.source : (r.niche as string | undefined) ?? r.source),
       filterable: true,
       headerExtra: fieldLink("industry"),
     },
