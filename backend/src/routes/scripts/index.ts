@@ -6,6 +6,9 @@ import { resolveActor } from "../../lib/twenty/actor/index.js";
 import type { AgencyScript } from "./types.js";
 import { mapScript } from "./helpers/index.js";
 
+import { OBJECTS } from "../../lib/wholesale/objects.js";
+const SCRIPT_OBJECT = OBJECTS.scripts as string;
+const CAMPAIGN_OBJECT = OBJECTS.campaigns as string;
 const router = Router();
 router.use(authMiddleware);
 
@@ -14,7 +17,7 @@ const log = createLogger('scripts');
 router.get("/", async (_req, res) => {
   try {
     log.info('Listing scripts from Twenty CRM');
-    const scripts = await listTwenty<AgencyScript>('agencyScripts', 100);
+    const scripts = await listTwenty<AgencyScript>(SCRIPT_OBJECT, 100);
     
     const mapped = scripts.map(mapScript);
 
@@ -30,7 +33,7 @@ router.get("/:id", async (req, res) => {
   try {
     log.info(`Getting script ${req.params.id}`);
     const id = req.params.id as string;
-    const script = await getTwenty<AgencyScript>(`agencyScripts`, id);
+    const script = await getTwenty<AgencyScript>(SCRIPT_OBJECT, id);
     
     const mapped = mapScript(script);
 
@@ -57,7 +60,7 @@ router.post("/", async (req: AuthRequest, res) => {
       payload.campaignIdId = campaignId;
     }
 
-    const result = await createTwenty<any>('agencyScripts', payload, await resolveActor(req));
+    const result = await createTwenty<any>(SCRIPT_OBJECT, payload, await resolveActor(req));
     const script = result.data || result;
     
     const mapped = mapScript(script);

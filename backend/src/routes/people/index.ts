@@ -9,6 +9,8 @@ import { UUID, mapPerson, personPayload, type AgencyPersonRecord } from "./helpe
  * The people at a business (agencyPerson). A prospect has many, through
  * agencyPerson.prospectId; a lead points at one, through agencyLead.personId.
  */
+import { OBJECTS } from "../../lib/wholesale/objects.js";
+const PERSON_OBJECT = OBJECTS.people as string;
 const router = Router();
 router.use(authMiddleware);
 const log = createLogger("people");
@@ -19,7 +21,7 @@ router.get("/", async (req, res) => {
   const leadId = String(req.query.leadId ?? "");
   try {
     if (UUID.test(prospectId)) {
-      const rows = await listTwenty<AgencyPersonRecord>("agencyPeople", { limit: 50, filter: `prospectId[eq]:"${prospectId}"` });
+      const rows = await listTwenty<AgencyPersonRecord>(PERSON_OBJECT, { limit: 50, filter: `prospectId[eq]:"${prospectId}"` });
       res.json(rows.map(mapPerson));
       return;
     }
@@ -29,7 +31,7 @@ router.get("/", async (req, res) => {
         res.json([]);
         return;
       }
-      res.json([mapPerson(await getTwenty<AgencyPersonRecord>("agencyPeople", lead.personId))]);
+      res.json([mapPerson(await getTwenty<AgencyPersonRecord>(PERSON_OBJECT, lead.personId))]);
       return;
     }
     res.status(400).json({ error: "Pass prospectId or leadId" });
@@ -52,7 +54,7 @@ router.post("/", async (req: AuthRequest, res) => {
   if (UUID.test(prospectId)) payload.prospectId = prospectId;
   try {
     const actor = await resolveActor(req);
-    const created = await createTwenty<AgencyPersonRecord>("agencyPeople", payload, actor);
+    const created = await createTwenty<AgencyPersonRecord>(PERSON_OBJECT, payload, actor);
     if (UUID.test(leadId)) await updateTwenty("agencyLeads", leadId, { personId: created.id }, actor);
     res.status(201).json(mapPerson(created));
   } catch (err: any) {
@@ -70,7 +72,7 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     return;
   }
   try {
-    const updated = await updateTwenty<AgencyPersonRecord>("agencyPeople", id, payload, await resolveActor(req));
+    const updated = await updateTwenty<AgencyPersonRecord>(PERSON_OBJECT, id, payload, await resolveActor(req));
     res.json(mapPerson(updated));
   } catch (err: any) {
     log.error(`update person failed: ${err?.message}`);
@@ -86,7 +88,7 @@ router.delete("/:id", async (req, res) => {
     return;
   }
   try {
-    await deleteTwenty("agencyPeople", id);
+    await deleteTwenty(PERSON_OBJECT, id);
     res.status(204).end();
   } catch (err: any) {
     log.error(`delete person failed: ${err?.message}`);

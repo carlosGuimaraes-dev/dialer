@@ -1,6 +1,7 @@
 import { twentyGraphqlClient } from "../graphql/index.js";
 import { createLogger } from "../../logger/index.js";
 import { lastOutcomes, type CallStub } from "./helpers/index.js";
+import { OBJECTS, contactRelationId } from "../../wholesale/objects.js";
 
 export * from "./helpers/index.js";
 
@@ -16,15 +17,22 @@ let cached: { at: number; value: Promise<Map<string, string>> } | null = null;
 
 async function load(): Promise<Map<string, string>> {
   const client: any = twentyGraphqlClient();
+  const prospectKey = contactRelationId("prospects");
+  const leadKey = contactRelationId("leads");
   const calls: CallStub[] = [];
   for (let page = 0; page < MAX_PAGES; page++) {
     const r: any = await client.query({
-      agencyCalls: {
+      [OBJECTS.calls]: {
         __args: { first: PAGE, offset: page * PAGE, orderBy: [{ createdAt: "DescNullsLast" }, { id: "AscNullsFirst" }] },
-        edges: { node: { agencyProspectId: true, agencyLeadId: true, disposition: true, status: true } },
+        edges: { node: { [prospectKey]: true, [leadKey]: true, disposition: true, status: true } },
       },
     });
-    const nodes = (r?.agencyCalls?.edges ?? []).map((e: any) => e.node as CallStub);
+    const nodes = ((r?.[OBJECTS.calls]?.edges ?? []) as any[]).map((e: any) => ({
+      agencyProspectId: e.node[prospectKey],
+      agencyLeadId: e.node[leadKey],
+      disposition: e.node.disposition,
+      status: e.node.status,
+    })) as CallStub[];
     calls.push(...nodes);
     if (nodes.length < PAGE) break;
     if (page === MAX_PAGES - 1) log.info(`Last-call index stopped at ${calls.length} calls`);

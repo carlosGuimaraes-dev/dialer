@@ -151,6 +151,11 @@ const RELATION_FIELDS = [
   { name: "agencyPhone", target: "agencyPhone" },
   { name: "agencyProspect", target: "agencyProspect" },
   { name: "agencyLead", target: "agencyLead" },
+  // Wholesale workspace: calls point at the property (landOpportunity) and
+  // the investor (buyer) through the same MANY_TO_ONE shape. Missing here
+  // when the target object does not exist (agency workspaces).
+  { name: "landOpportunity", target: "landOpportunity" },
+  { name: "buyer", target: "buyer" },
 ];
 
 const DATE_TIME_FIELDS = ["startedAt", "endedAt", "meetingAt", "aiAnalyzedAt"];

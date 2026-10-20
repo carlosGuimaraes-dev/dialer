@@ -6,6 +6,9 @@ import { resolveActor } from "../../lib/twenty/actor/index.js";
 import type { AgencyCampaign } from "./types.js";
 import { mapCampaign, mapCampaignType } from "./helpers/index.js";
 
+import { OBJECTS } from "../../lib/wholesale/objects.js";
+const CAMPAIGN_OBJECT = OBJECTS.campaigns as string;
+const SCRIPT_OBJECT = OBJECTS.scripts as string;
 const router = Router();
 router.use(authMiddleware);
 
@@ -14,7 +17,7 @@ const log = createLogger('campaigns');
 router.get("/", async (_req, res) => {
   try {
     log.info('Listing campaigns from Twenty CRM');
-    const campaigns = await listTwenty<AgencyCampaign>('agencyCampaigns', 100);
+    const campaigns = await listTwenty<AgencyCampaign>(CAMPAIGN_OBJECT, 100);
 
     const mapped = campaigns.map(mapCampaign);
 
@@ -30,7 +33,7 @@ router.get("/:id", async (req, res) => {
   try {
     log.info(`Getting campaign ${req.params.id}`);
     const id = req.params.id as string;
-    const campaign = await getTwenty<AgencyCampaign>(`agencyCampaigns`, id);
+    const campaign = await getTwenty<AgencyCampaign>(CAMPAIGN_OBJECT, id);
 
     const mapped = mapCampaign(campaign);
 
@@ -54,7 +57,7 @@ router.post("/", async (req: AuthRequest, res) => {
       note: settings ? JSON.stringify(settings) : undefined,
     };
 
-    const result = await createTwenty<any>('agencyCampaigns', payload, await resolveActor(req));
+    const result = await createTwenty<any>(CAMPAIGN_OBJECT, payload, await resolveActor(req));
     const campaign = result.data || result;
 
     const mapped = mapCampaign(campaign);
@@ -99,7 +102,7 @@ router.patch("/:id", async (req: AuthRequest, res) => {
       return;
     }
 
-    const result = await updateTwenty<any>('agencyCampaigns', id, payload, await resolveActor(req));
+    const result = await updateTwenty<any>(CAMPAIGN_OBJECT, id, payload, await resolveActor(req));
     const campaign = result.data || result;
 
     const mapped = mapCampaign(campaign);
@@ -117,7 +120,7 @@ router.delete("/:id", async (req, res) => {
     log.info(`Deleting campaign ${req.params.id}`);
     const id = req.params.id as string;
 
-    await deleteTwenty('agencyCampaigns', id);
+    await deleteTwenty(CAMPAIGN_OBJECT, id);
 
     log.info(`Deleted campaign ${id}`);
     res.status(204).end();

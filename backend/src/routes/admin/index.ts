@@ -7,6 +7,8 @@ import { createLogger } from "../../lib/logger/index.js";
 import { DIALER_TARGET_FILTER, mapActivity, recordTargetFilter } from "./helpers/index.js";
 import type { AdminActivity, AdminActivityResponse } from "./types.js";
 
+import { OBJECTS, contactRelationId } from "../../lib/wholesale/objects.js";
+const CALL_OBJECT = OBJECTS.calls as string;
 const router = Router();
 router.use(authMiddleware);
 
@@ -36,10 +38,10 @@ const DEFAULT_RANGE_MS = 7 * 24 * 3600 * 1000;
 async function contactTargetFilter(contact: string): Promise<string | null> {
   const [type, id] = contact.split(":");
   if ((type !== "prospect" && type !== "lead") || !/^[0-9a-f-]{36}$/i.test(id ?? "")) return null;
-  const callColumn = type === "lead" ? "agencyLeadId" : "agencyProspectId";
+  const callColumn = type === "lead" ? contactRelationId("leads") : contactRelationId("prospects");
   const [calls, texts] = await Promise.all([
-    fetchTwenty<any>("agencyCalls", { limit: 60, query: { filter: `${callColumn}[eq]:"${id}"`, order_by: "createdAt[DescNullsLast]" } })
-      .then((b) => (b?.data?.agencyCalls ?? []).map((c: any) => c.id as string))
+    fetchTwenty<any>(CALL_OBJECT, { limit: 60, query: { filter: `${callColumn}[eq]:"${id}"`, order_by: "createdAt[DescNullsLast]" } })
+      .then((b) => ((b?.data ?? {} as any)[CALL_OBJECT] ?? []).map((c: any) => c.id as string))
       .catch(() => [] as string[]),
     loadContact(type, id)
       .then(({ numbers }) => messagesFor(numbers))

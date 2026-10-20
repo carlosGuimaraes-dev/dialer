@@ -3,6 +3,9 @@ import { callResultMachine } from "@dialer/shared";
 import { listTwenty, createTwenty, updateTwenty } from "../../../lib/twenty/client/index.js";
 import { analyzeCallTranscript, isAiConfigured } from "../../../lib/ai/analysis/index.js";
 import { createLogger } from "../../../lib/logger/index.js";
+import { OBJECTS } from "../../../lib/wholesale/objects.js";
+
+const CALL_OBJECT = OBJECTS.calls as string;
 import type { AgencyCall } from "../../calls/types.js";
 import { handleBridgeEvent } from "../../../lib/audioBridge/index.js";
 import { bridgeConfig, bridgeDeps } from "../../../lib/audioBridge/telnyx.js";
@@ -40,7 +43,7 @@ function filterLiteral(value: string): string {
 
 /** The call row for a Telnyx call, looked up by filter (not a scan of every call). */
 async function findCallByTelnyxId(telnyxCallId: string): Promise<AgencyCall | null> {
-  const calls = await listTwenty<AgencyCall>('agencyCalls', { limit: 1, filter: `telnyxCallId[eq]:${filterLiteral(telnyxCallId)}` });
+  const calls = await listTwenty<AgencyCall>(CALL_OBJECT, { limit: 1, filter: `telnyxCallId[eq]:${filterLiteral(telnyxCallId)}` });
   return calls[0] ?? null;
 }
 
@@ -53,7 +56,7 @@ async function findOpenCallByParties(from?: string, to?: string): Promise<Agency
   if (!from && !to) return null;
   const windowStart = Date.now() - 120 * 60_000;
   // Only the last two hours of calls, filtered in Twenty.
-  const calls = await listTwenty<AgencyCall>('agencyCalls', {
+  const calls = await listTwenty<AgencyCall>(CALL_OBJECT, {
     limit: 200,
     filter: `createdAt[gte]:"${new Date(windowStart).toISOString()}"`,
   });
@@ -88,7 +91,7 @@ async function maybeAnalyze(callId: string, transcript: string, call: AgencyCall
       direction: call.direction,
       durationSeconds: call.durationSeconds,
     });
-    await updateTwenty<AgencyCall>('agencyCalls', callId, {
+    await updateTwenty<AgencyCall>(CALL_OBJECT, callId, {
       aiSummary: analysis.summary,
       aiSentiment: analysis.sentiment,
       aiScore: analysis.score,
@@ -117,7 +120,7 @@ async function handleRecordingSaved(p: any): Promise<string> {
     const patch: Record<string, unknown> = { transcriptionStatus: "PENDING" };
     if (recordingId) patch.telnyxRecordingId = recordingId;
     if (downloadUrl) patch.recordingUrl = downloadUrl;
-    await updateTwenty<AgencyCall>('agencyCalls', existing.id, patch);
+    await updateTwenty<AgencyCall>(CALL_OBJECT, existing.id, patch);
     return `attached to ${existing.id}`;
   }
 
@@ -131,7 +134,7 @@ async function handleRecordingSaved(p: any): Promise<string> {
     };
     if (recordingId) patch.telnyxRecordingId = recordingId;
     if (downloadUrl) patch.recordingUrl = downloadUrl;
-    await updateTwenty<AgencyCall>('agencyCalls', orphan.id, patch);
+    await updateTwenty<AgencyCall>(CALL_OBJECT, orphan.id, patch);
     return `attached to open row ${orphan.id} (parties fallback)`;
   }
 
@@ -160,13 +163,13 @@ async function handleTranscriptionSaved(p: any): Promise<string> {
     if (!orphan) return "no matching call row";
     const patch: Record<string, unknown> = { telnyxCallId: callControlId, transcriptionStatus: "READY" };
     if (text) patch.transcript = text;
-    await updateTwenty<AgencyCall>('agencyCalls', orphan.id, patch);
+    await updateTwenty<AgencyCall>(CALL_OBJECT, orphan.id, patch);
     if (text) void maybeAnalyze(orphan.id, text, orphan);
     return `transcript attached to open row ${orphan.id} (parties fallback)`;
   }
   const patch: Record<string, unknown> = { transcriptionStatus: "READY" };
   if (text) patch.transcript = text;
-  await updateTwenty<AgencyCall>('agencyCalls', existing.id, patch);
+  await updateTwenty<AgencyCall>(CALL_OBJECT, existing.id, patch);
   if (text) void maybeAnalyze(existing.id, text, existing);
   return `transcript attached to ${existing.id}`;
 }

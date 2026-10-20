@@ -9,6 +9,11 @@ import type { AgencyCall } from "./types.js";
 import { mapCall, sortNewestFirst, splitStatus } from "./helpers/index.js";
 import { callResultMachine } from "@dialer/shared";
 import { forgetLastCalls } from "../../lib/twenty/lastCall/index.js";
+import { OBJECTS, contactRelationAliases } from "../../lib/wholesale/objects.js";
+import { writeBackCallOutcome } from "../../lib/wholesale/blocks/callOutcome.js";
+
+/** The Twenty object behind persisted calls (agencyCalls until remapped). */
+const CALL_OBJECT = OBJECTS.calls as string;
 
 const router = Router();
 router.use(authMiddleware);
@@ -20,7 +25,7 @@ const log = createLogger('calls');
 // calls landed mid-list and Recents / Call History never showed them.
 router.get("/", async (_req, res) => {
   try {
-    const calls = await listTwentyAll<AgencyCall>('agencyCalls');
+    const calls = await listTwentyAll<AgencyCall>(CALL_OBJECT);
     res.json(sortNewestFirst(calls.map(mapCall)));
   } catch (err: any) {
     log.error("Failed to fetch calls:", err.message);
@@ -31,7 +36,7 @@ router.get("/", async (_req, res) => {
 // GET /api/calls/:id
 router.get("/:id", async (req, res) => {
   try {
-    const call = await getTwenty<AgencyCall>('agencyCalls', req.params.id as string);
+    const call = await getTwenty<AgencyCall>(CALL_OBJECT, req.params.id as string);
     res.json(mapCall(call));
   } catch (err: any) {
     res.status(404).json({ error: "Call not found" });
@@ -46,7 +51,7 @@ router.get("/:id", async (req, res) => {
 // the URL with fetch and then plays it directly.
 router.get("/:id/audio", async (req, res) => {
   try {
-    const call = await getTwenty<AgencyCall>('agencyCalls', req.params.id as string);
+    const call = await getTwenty<AgencyCall>(CALL_OBJECT, req.params.id as string);
     if (!call.telnyxRecordingId) {
       res.status(404).json({ error: "No Telnyx recording for this call yet" });
       return;
@@ -93,7 +98,7 @@ router.get("/:id/audio", async (req, res) => {
 // what creates the recording object that later arrives via call.recording.saved.
 router.post("/:id/record", async (req, res) => {
   try {
-    const call = await getTwenty<AgencyCall>('agencyCalls', req.params.id as string);
+    const call = await getTwenty<AgencyCall>(CALL_OBJECT, req.params.id as string);
     if (!call.telnyxCallId) {
       res.status(400).json({ error: "Call has no telnyxCallId yet (not answered?)" });
       return;
@@ -121,7 +126,7 @@ router.post("/:id/record", async (req, res) => {
       started?.data?.recording_id || started?.data?.id || null;
     if (recordingId) {
       try {
-        await updateTwenty<AgencyCall>('agencyCalls', call.id, {
+        await updateTwenty<AgencyCall>(CALL_OBJECT, call.id, {
           telnyxRecordingId: recordingId,
           transcriptionStatus: "PENDING",
         });
@@ -142,7 +147,7 @@ router.post("/:id/record", async (req, res) => {
 // + time window and attach it. Returns { attached: boolean }.
 router.post("/:id/reconcile", async (req, res) => {
   try {
-    const call = await getTwenty<AgencyCall>('agencyCalls', req.params.id as string);
+    const call = await getTwenty<AgencyCall>(CALL_OBJECT, req.params.id as string);
     if (call.telnyxRecordingId) {
       res.json({ attached: true, already: true });
       return;
@@ -182,7 +187,7 @@ router.post("/:id/reconcile", async (req, res) => {
     if (match?.download_urls?.mp3) patch.recordingUrl = match.download_urls.mp3;
     else if (match?.download_urls?.wav) patch.recordingUrl = match.download_urls.wav;
     if (match?.call_control_id) patch.telnyxCallId = match.call_control_id;
-    const updated = await updateTwenty<AgencyCall>('agencyCalls', call.id, patch);
+    const updated = await updateTwenty<AgencyCall>(CALL_OBJECT, call.id, patch);
     log.info(`Reconciled recording: call=${call.id} rec=${match.id}`);
     res.json({ attached: true, telnyxRecordingId: match.id, call: mapCall(updated) });
   } catch (err: any) {
@@ -200,7 +205,8 @@ router.post("/", async (req: AuthRequest, res) => {
       transcript, transcriptionStatus, summary,
       aiSummary, aiSentiment, aiScore, aiKeyPoints, aiScores, aiConfidence, aiModel, aiAnalyzedAt,
       agencyPhoneId, agencyProspectId, agencyLeadId,
-    } = req.body as Partial<AgencyCall>;
+      landOpportunityId, buyerId,
+    } = req.body as Partial<AgencyCall> & { landOpportunityId?: string; buyerId?: string };
 
     if (!toNumber) {
       res.status(400).json({ error: "toNumber is required" });
@@ -238,10 +244,16 @@ router.post("/", async (req: AuthRequest, res) => {
     if (aiModel) payload.aiModel = aiModel;
     if (aiAnalyzedAt) payload.aiAnalyzedAt = aiAnalyzedAt;
     if (agencyPhoneId) payload.agencyPhoneId = agencyPhoneId;
-    if (agencyProspectId) payload.agencyProspectId = agencyProspectId;
-    if (agencyLeadId) payload.agencyLeadId = agencyLeadId;
+    // Contact relations follow the workspace's object names (landOpportunity
+    // / buyer); the agency spellings still work so both frontends keep
+    // posting the same payload.
+    const [prospectRelation, leadRelation] = [contactRelationAliases("prospects")[0], contactRelationAliases("leads")[0]];
+    const prospectContact = agencyProspectId || landOpportunityId;
+    const leadContact = agencyLeadId || buyerId;
+    if (prospectContact) payload[prospectRelation] = prospectContact;
+    if (leadContact) payload[leadRelation] = leadContact;
 
-    const created = await createTwenty<AgencyCall>('agencyCalls', payload, await resolveActor(req));
+    const created = await createTwenty<AgencyCall>(CALL_OBJECT, payload, await resolveActor(req));
     log.info(
       `Call logged: ${created.id} ${payload.direction} ${payload.fromNumber || "?"} -> ${toNumber} ` +
       `status=${payload.status} dur=${payload.durationSeconds}s ` +
@@ -259,6 +271,14 @@ router.post("/", async (req: AuthRequest, res) => {
     }
 
     forgetLastCalls();
+    // Wholesale columns (callOutcome/sellerStage/lastCall*) advance best-effort.
+    if (prospectContact || leadContact) {
+      void writeBackCallOutcome(
+        leadContact ? "lead" : "prospect",
+        String(leadContact || prospectContact),
+        { disposition: payload.disposition as string | undefined, notes: payload.notes as string | undefined, endedAt: payload.endedAt as string | undefined },
+      );
+    }
     res.status(201).json(mapCall(created));
   } catch (err: any) {
     log.error("Failed to log call:", err.message);
@@ -285,7 +305,7 @@ router.patch("/:id", async (req, res) => {
       if (split.disposition && patch.disposition === undefined) patch.disposition = split.disposition;
       // A finished call never goes back to In progress (a late keepalive or
       // retry must not reopen it): drop that one field, keep the rest.
-      const current = await getTwenty<AgencyCall>('agencyCalls', req.params.id as string);
+      const current = await getTwenty<AgencyCall>(CALL_OBJECT, req.params.id as string);
       if (!callResultMachine.transition(current.status ?? "IN_PROGRESS", patch.status).ok) {
         log.info(`call ${req.params.id}: ignored status ${current.status} -> ${patch.status}`);
         delete patch.status;
@@ -297,8 +317,20 @@ router.patch("/:id", async (req, res) => {
       return;
     }
     const actor = await resolveActor(req);
-    const updated = await updateTwenty<AgencyCall>('agencyCalls', req.params.id as string, patch, actor);
+    const updated = await updateTwenty<AgencyCall>(CALL_OBJECT, req.params.id as string, patch, actor);
     forgetLastCalls();
+    // A disposition set after the fact still advances the wholesale record.
+    if (patch.disposition) {
+      const [prospectRelation, leadRelation] = [contactRelationAliases("prospects")[0], contactRelationAliases("leads")[0]];
+      const owner = (updated as any)[leadRelation] || (updated as any)[prospectRelation];
+      if (owner) {
+        void writeBackCallOutcome((updated as any)[leadRelation] ? "lead" : "prospect", String(owner), {
+          disposition: String(patch.disposition),
+          notes: (patch.notes as string | undefined) ?? (updated as any).notes,
+          endedAt: ((patch.endedAt as string | undefined) ?? (updated as any).endedAt) || undefined,
+        });
+      }
+    }
     res.json(mapCall(updated));
   } catch (err: any) {
     log.error("Failed to update call:", err.message);
@@ -316,7 +348,7 @@ router.post("/:id/analyze", async (req, res) => {
       res.status(500).json({ error: "OPENAI_API_KEY not configured" });
       return;
     }
-    const call = await getTwenty<AgencyCall>('agencyCalls', req.params.id as string);
+    const call = await getTwenty<AgencyCall>(CALL_OBJECT, req.params.id as string);
     if (!call.transcript || call.transcript.trim().length < 10) {
       res.status(400).json({ error: "Call has no transcript to analyze yet" });
       return;
@@ -344,7 +376,7 @@ router.post("/:id/analyze", async (req, res) => {
       // Keep legacy summary in sync so old UI surfaces still show something.
       summary: analysis.summary,
     };
-    const updated = await updateTwenty<AgencyCall>('agencyCalls', call.id, patch, await resolveActor(req));
+    const updated = await updateTwenty<AgencyCall>(CALL_OBJECT, call.id, patch, await resolveActor(req));
     log.info(`AI analysis stored: call=${call.id} sentiment=${analysis.sentiment} score=${analysis.score}`);
     res.json({ ok: true, analysis, call: mapCall(updated) });
   } catch (err: any) {

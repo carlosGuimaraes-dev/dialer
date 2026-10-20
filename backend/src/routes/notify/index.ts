@@ -10,6 +10,8 @@ import {
 } from "../../lib/twenty/workspaceMember/index.js";
 import type { BarkNotifyBody } from "./types.js";
 
+import { OBJECTS } from "../../lib/wholesale/objects.js";
+const LEAD_OBJECT = OBJECTS.leads as string;
 const router = Router();
 router.use(authMiddleware);
 
@@ -118,7 +120,7 @@ router.post("/bark", async (req: AuthRequest, res: Response) => {
 router.post("/bark/lead/:id", async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const lead = await getTwenty<any>("agencyLeads", id);
+    const lead = await getTwenty<any>(LEAD_OBJECT, id);
     const contactName =
       lead.contactName || [lead.firstName, lead.lastName].filter(Boolean).join(" ") || null;
     const phone =

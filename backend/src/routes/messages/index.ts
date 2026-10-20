@@ -8,7 +8,10 @@ import { selectValue } from "../prospects/helpers/index.js";
 import type { AgencyMessage } from "./types.js";
 import { FAILED_STATUSES, oldestFirst, PENDING_STATUSES, preview, telnyxSendResult, toMessageView } from "./helpers/index.js";
 import { loadContact, messagesFor, touchConversation, type ContactType } from "./thread.js";
+import { OBJECTS } from "../../lib/wholesale/objects.js";
 
+const MESSAGE_OBJECT = OBJECTS.messages as string;
+const PROJECT_OBJECT = OBJECTS.prospects as string;
 const router = Router();
 router.use(authMiddleware);
 const log = createLogger("messages");
@@ -32,7 +35,7 @@ async function refreshPending(rows: AgencyMessage[]): Promise<void> {
         if (!res.ok) return;
         const { status, error } = telnyxSendResult(await res.json());
         if (status && status !== String(m.status).toLowerCase()) {
-          await updateTwenty("agencyMessages", m.id, { status, ...(error ?? {}) });
+          await updateTwenty(MESSAGE_OBJECT, m.id, { status, ...(error ?? {}) });
           m.status = status;
           if (error) Object.assign(m, error);
         }
@@ -61,7 +64,7 @@ async function backfillFailure(m: AgencyMessage): Promise<void> {
     if (!res.ok) return;
     const { error } = telnyxSendResult(await res.json());
     if (!error) return;
-    await updateTwenty("agencyMessages", m.id, error);
+    await updateTwenty(MESSAGE_OBJECT, m.id, error);
     Object.assign(m, error);
   } catch (err: any) {
     log.info(`Failure reason not recorded for ${m.id}: ${err.message}`);
@@ -129,7 +132,7 @@ router.post("/send", async (req: AuthRequest, res) => {
     const actor = await resolveActor(req);
     const at = new Date().toISOString();
     const row = await createTwenty<AgencyMessage>(
-      "agencyMessages",
+      MESSAGE_OBJECT,
       { name: preview(body), body, direction: "OUTBOUND", fromNumber: from, toNumber: to, status: result.status, telnyxMessageId: result.id, ...(result.error ?? {}) },
       actor,
     );
@@ -143,7 +146,7 @@ router.post("/send", async (req: AuthRequest, res) => {
     if (who.type === "prospect") {
       const step = onPageSent(selectValue(record?.outboundLabel));
       if (step.ok && step.changed) {
-        await updateTwenty("agencyProspects", who.id, { outboundLabel: step.to }, actor).catch((err: any) => log.info(`outboundLabel not advanced: ${err.message}`));
+        await updateTwenty(PROJECT_OBJECT, who.id, { outboundLabel: step.to }, actor).catch((err: any) => log.info(`outboundLabel not advanced: ${err.message}`));
       }
     }
 

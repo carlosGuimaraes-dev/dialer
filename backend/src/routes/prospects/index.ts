@@ -14,6 +14,15 @@ import { frameAllowed, framingHeaders, prospectPageUrl } from "../../lib/website
 import { createLogger } from "../../lib/logger/index.js";
 import { resolveActor } from "../../lib/twenty/actor/index.js";
 import { listWorkspaceMembers } from "../../lib/twenty/workspaceMember/index.js";
+import { OBJECTS, contactRelationId } from "../../lib/wholesale/objects.js";
+import {
+  mapOpportunityListItem,
+  mapOpportunityDetail,
+  mapOpportunityUpdateResult,
+  mapOpportunityCreateResult,
+  frontendToOpportunityPayload,
+} from "../../lib/wholesale/landOpportunity/map.js";
+import { mapBuyerListItem } from "../../lib/wholesale/buyer/map.js";
 import type { AgencyProspect, AgencyCampaign, IndustryRouting } from "./types.js";
 import {
   selectValue,
@@ -30,6 +39,29 @@ router.use(authMiddleware);
 
 const log = createLogger('prospects');
 
+/** The Twenty object behind "prospect" (landOpportunities in the wholesale workspace). */
+const PROSPECT_OBJECT = OBJECTS.prospects as string;
+const LEAD_OBJECT = OBJECTS.leads as string;
+const CALL_OBJECT = OBJECTS.calls as string;
+const PERSON_OBJECT = OBJECTS.people as string;
+const CAMPAIGN_OBJECT = OBJECTS.campaigns as string;
+const PROSPECT_RELATION_ID = contactRelationId("prospects");
+const LEAD_RELATION_ID = contactRelationId("leads");
+
+/** Row -> Contacts table entry, whatever object backs "prospect" today. */
+const mapProspectRow = (r: any) =>
+  PROSPECT_OBJECT === "agencyProspects" ? mapProspectListItem(r) : mapOpportunityListItem(r);
+
+/** Row -> Contacts table entry for "lead" (buyers in the wholesale workspace). */
+const mapLeadRow = (r: any) =>
+  LEAD_OBJECT === "agencyLeads" ? mapLeadToFrontend(r) : mapBuyerListItem(r);
+
+/** Detail/patch views follow the same object switch. */
+const mapProspectDetailView = (r: any) =>
+  PROSPECT_OBJECT === "agencyProspects" ? mapProspectDetail(r) : mapOpportunityDetail(r);
+const mapProspectUpdateView = (r: any) =>
+  PROSPECT_OBJECT === "agencyProspects" ? mapProspectUpdateResult(r) : mapOpportunityUpdateResult(r);
+
 /**
  * Industry routing read from the agencyCampaign row — the only source of
  * urlKey/funnel/template bases. Linked campaign first, else the campaign
@@ -43,7 +75,7 @@ async function resolveIndustryRouting(prospect: AgencyProspect): Promise<Industr
   const linkedId = typeof linked === "string" ? linked : linked?.id;
   if (linkedId) {
     try {
-      const campaign: any = await getTwenty<any>('agencyCampaigns', linkedId);
+      const campaign: any = await getTwenty<any>(CAMPAIGN_OBJECT, linkedId);
       if (campaign?.urlKey) return campaign;
     } catch {
       // fall through to industryId filter
@@ -52,7 +84,7 @@ async function resolveIndustryRouting(prospect: AgencyProspect): Promise<Industr
   const label = selectValue(prospect.label);
   if (!label) return null;
   try {
-    const campaigns = await listTwenty<any>('agencyCampaigns', {
+    const campaigns = await listTwenty<any>(CAMPAIGN_OBJECT, {
       limit: 1,
       filter: `industryId[eq]:${label}`,
     } as any);
@@ -66,12 +98,12 @@ async function resolveIndustryRouting(prospect: AgencyProspect): Promise<Industr
 router.get("/", async (_req, res) => {
   try {
     log.info('Listing prospects from Twenty CRM');
-    const prospects = await listTwentyAll<AgencyProspect>('agencyProspects');
+    const prospects = await listTwentyAll<AgencyProspect>(PROSPECT_OBJECT);
 
     // Fetch campaigns to resolve campaign types
     let campaignMap: Record<string, string> = {};
     try {
-      const campaigns = await listTwenty<AgencyCampaign>('agencyCampaigns', 100);
+      const campaigns = await listTwenty<AgencyCampaign>(CAMPAIGN_OBJECT, 100);
       campaignMap = Object.fromEntries(campaigns.map(c => [c.id, c.utmSource || 'outbound']));
     } catch {
       // Campaign lookup is best-effort; proceed without it
@@ -132,22 +164,22 @@ router.get("/page", async (req, res) => {
         let after: string | undefined;
         for (let page = 0; page < 25; page++) {
           const r: any = await client.query({
-            agencyProspects: {
+            [PROSPECT_OBJECT]: {
               __args: { first: 200, ...(after ? { after } : {}), ...(companyQ.filter ? { filter: companyQ.filter } : {}) },
               edges: { node: { id: true } },
               pageInfo: { hasNextPage: true, endCursor: true },
             },
           });
-          prospectIds.push(...(r?.agencyProspects?.edges ?? []).map((e: any) => e.node.id as string));
-          if (!r?.agencyProspects?.pageInfo?.hasNextPage) break;
-          after = r.agencyProspects.pageInfo.endCursor;
+          prospectIds.push(...((r?.[PROSPECT_OBJECT]?.edges ?? []) as any[]).map((e: any) => e.node.id as string));
+          if (!r?.[PROSPECT_OBJECT]?.pageInfo?.hasNextPage) break;
+          after = r[PROSPECT_OBJECT].pageInfo.endCursor;
         }
       }
       peq = prospectIds && prospectIds.length === 0 ? null : personGqlQuery(params, prospectIds);
     }
     const PERSON_NODE = { __scalar: true, phones: { __scalar: true }, emails: { __scalar: true } };
 
-    const fetchSlice = async (object: "agencyProspects" | "agencyLeads" | "agencyPeople", q: { filter?: unknown; orderBy: unknown }, node: object, first: number, skip: number) => {
+    const fetchSlice = async (object: string, q: { filter?: unknown; orderBy: unknown }, node: object, first: number, skip: number) => {
       const r: any = await client.query({
         [object]: { __args: { first: Math.max(1, first), offset: skip, orderBy: q.orderBy, ...(q.filter ? { filter: q.filter } : {}) }, totalCount: true, edges: { node } },
       });
@@ -156,23 +188,23 @@ router.get("/page", async (req, res) => {
 
     // Totals first (1-row queries), so the table can size its scroll area.
     const [pTotal, lTotal, peTotal] = await Promise.all([
-      pq ? fetchSlice("agencyProspects", pq, { id: true }, 1, 0).then((r) => r.total) : Promise.resolve(0),
+      pq ? fetchSlice(PROSPECT_OBJECT, pq, { id: true }, 1, 0).then((r) => r.total) : Promise.resolve(0),
       // Leads are a bonus to the prospect list: if Twenty rejects the lead query, show prospects alone.
       lq
-        ? fetchSlice("agencyLeads", lq, { id: true }, 1, 0)
+        ? fetchSlice(LEAD_OBJECT, lq, { id: true }, 1, 0)
             .then((r) => r.total)
             .catch((err) => {
               log.info(`Lead query skipped: ${err.message}`);
               return 0;
             })
         : Promise.resolve(0),
-      peq ? fetchSlice("agencyPeople", peq, { id: true }, 1, 0).then((r) => r.total) : Promise.resolve(0),
+      peq ? fetchSlice(PERSON_OBJECT, peq, { id: true }, 1, 0).then((r) => r.total) : Promise.resolve(0),
     ]);
 
     const sources = [
-      pq && pTotal > 0 ? { object: "agencyProspects" as const, q: pq, node: PROSPECT_NODE, total: pTotal, type: "prospect", map: mapProspectListItem } : null,
-      lq && lTotal > 0 ? { object: "agencyLeads" as const, q: lq, node: LEAD_NODE, total: lTotal, type: "lead", map: (r: any) => mapLeadToFrontend(r) } : null,
-      peq && peTotal > 0 ? { object: "agencyPeople" as const, q: peq, node: PERSON_NODE, total: peTotal, type: "person", map: mapPersonListItem } : null,
+      pq && pTotal > 0 ? { object: PROSPECT_OBJECT, q: pq, node: PROSPECT_NODE, total: pTotal, type: "prospect", map: mapProspectRow } : null,
+      lq && lTotal > 0 ? { object: LEAD_OBJECT, q: lq, node: LEAD_NODE, total: lTotal, type: "lead", map: mapLeadRow } : null,
+      peq && peTotal > 0 ? { object: PERSON_OBJECT, q: peq, node: PERSON_NODE, total: peTotal, type: "person", map: mapPersonListItem } : null,
     ].filter((x): x is NonNullable<typeof x> => !!x);
     if (params.sort === "contact_type" && params.dir === "desc") sources.reverse();
 
@@ -196,9 +228,9 @@ router.get("/page", async (req, res) => {
     if (personCompanies.length) {
       try {
         const r: any = await client.query({
-          agencyProspects: { __args: { first: personCompanies.length, filter: { id: { in: personCompanies } } }, edges: { node: PROSPECT_NODE } },
+          [PROSPECT_OBJECT]: { __args: { first: personCompanies.length, filter: { id: { in: personCompanies } } }, edges: { node: PROSPECT_NODE } },
         });
-        for (const e of r?.agencyProspects?.edges ?? []) companyOf.set(e.node.id, mapProspectListItem(e.node));
+        for (const e of (r?.[PROSPECT_OBJECT]?.edges ?? []) as any[]) companyOf.set(e.node.id, mapProspectRow(e.node));
       } catch (err: any) {
         log.info(`Company lookup for people skipped: ${err.message}`);
       }
@@ -215,17 +247,17 @@ router.get("/page", async (req, res) => {
     const leadIds = rows.filter((r) => r.type === "lead").map((r) => r.id);
     const last = new Map<string, { id: string; status: string | null; at: string | null }>();
     const clauses = [
-      prospectIds.length ? `agencyProspectId[in]:[${prospectIds.join(",")}]` : null,
-      leadIds.length ? `agencyLeadId[in]:[${leadIds.join(",")}]` : null,
+      prospectIds.length ? `${PROSPECT_RELATION_ID}[in]:[${prospectIds.join(",")}]` : null,
+      leadIds.length ? `${LEAD_RELATION_ID}[in]:[${leadIds.join(",")}]` : null,
     ].filter(Boolean) as string[];
     if (clauses.length) {
       try {
-        const calls: any = await fetchTwenty("agencyCalls", {
+        const calls: any = await fetchTwenty(CALL_OBJECT, {
           limit: 200,
           query: { filter: clauses.length > 1 ? `or(${clauses.join(",")})` : clauses[0], order_by: "createdAt[DescNullsLast]" },
         });
-        for (const c of calls?.data?.agencyCalls ?? []) {
-          const owner = c.agencyProspectId || c.agencyLeadId;
+        for (const c of calls?.data?.[CALL_OBJECT] ?? []) {
+          const owner = c[PROSPECT_RELATION_ID] || c[LEAD_RELATION_ID];
           if (owner && !last.has(owner)) last.set(owner, { id: c.id, status: c.disposition || c.status || null, at: c.startedAt ?? c.createdAt ?? null });
         }
       } catch (err: any) {
@@ -255,10 +287,10 @@ router.get("/facets", async (_req, res) => {
     const client: any = twentyGraphqlClient();
     const group = async (field: string) => {
       const r: any = await client.query({
-        agencyProspectsGroupBy: { __args: { groupBy: [{ [field]: true }], limit: 500 }, groupByDimensionValues: true, totalCount: true },
+        [`${PROSPECT_OBJECT}GroupBy`]: { __args: { groupBy: [{ [field]: true }], limit: 500 }, groupByDimensionValues: true, totalCount: true },
       });
       const out: Record<string, number> = {};
-      for (const g of r?.agencyProspectsGroupBy ?? []) {
+      for (const g of (r?.[`${PROSPECT_OBJECT}GroupBy`] ?? []) as any[]) {
         const key = g?.groupByDimensionValues?.[0];
         // Import placeholders ("unknown") are not a value anyone filters by: leave them out of the menus.
         if (typeof key === "string" && key !== "" && realText(key) === undefined) continue;
@@ -283,7 +315,7 @@ router.get("/facets", async (_req, res) => {
       listWorkspaceMembers()
         .then((ms) => Object.fromEntries(ms.map((m) => [m.id, [m.firstName, m.lastName].filter(Boolean).join(" ").trim() || m.userEmail || m.id])))
         .catch(() => ({}) as Record<string, string>),
-      listTwenty<AgencyCampaign>("agencyCampaigns", 200)
+      listTwenty<AgencyCampaign>(CAMPAIGN_OBJECT, 200)
         .then((cs) => Object.fromEntries(cs.map((c: any) => [c.id, String(c.name ?? c.id)])))
         .catch(() => ({}) as Record<string, string>),
       // A failed call walk only loses the Last call counts, not the other filters.
@@ -294,9 +326,9 @@ router.get("/facets", async (_req, res) => {
     ]);
     const creator = Object.entries(creators).reduce((sum, [k, n]) => (k === "__blank" ? sum : sum + n), 0);
     const total = Object.values(country).reduce((a, b) => a + b, 0);
-    const leadsBody: any = await fetchTwenty("agencyLeads", { limit: 1 });
+    const leadsBody: any = await fetchTwenty(LEAD_OBJECT, { limit: 1 });
     // People are opt-in in the table (Type -> People), so they count in the Type menu but not in the total.
-    const peopleBody: any = await fetchTwenty("agencyPeople", { limit: 1 }).catch(() => null);
+    const peopleBody: any = await fetchTwenty(PERSON_OBJECT, { limit: 1 }).catch(() => null);
     const people = typeof peopleBody?.totalCount === "number" ? peopleBody.totalCount : 0;
     const leads = typeof leadsBody?.totalCount === "number" ? leadsBody.totalCount : 0;
     const lastCall = last ? { ...outcomeCounts(last), [NEVER_CALLED]: Math.max(0, total + leads - last.size) } : {};
@@ -334,12 +366,12 @@ router.get("/lookup", async (req, res) => {
     // An id may be a prospect or a lead (calls point at either); ask both.
     const filter = `id[in]:[${ids.join(",")}]`;
     const [prospects, leads]: any[] = await Promise.all([
-      fetchTwenty("agencyProspects", { limit: 200, query: { filter } }),
-      fetchTwenty("agencyLeads", { limit: 200, query: { filter } }).catch(() => null),
+      fetchTwenty(PROSPECT_OBJECT, { limit: 200, query: { filter } }),
+      fetchTwenty(LEAD_OBJECT, { limit: 200, query: { filter } }).catch(() => null),
     ]);
     res.json([
-      ...((prospects?.data?.agencyProspects ?? []) as AgencyProspect[]).map((r) => ({ ...mapProspectListItem(r), type: "prospect" })),
-      ...((leads?.data?.agencyLeads ?? []) as any[]).map((r) => ({ ...mapLeadToFrontend(r), type: "lead" })),
+      ...(((prospects?.data ?? {} as any)[PROSPECT_OBJECT] ?? []) as AgencyProspect[]).map((r: any) => ({ ...mapProspectRow(r), type: "prospect" })),
+      ...(((leads?.data ?? {} as any)[LEAD_OBJECT] ?? []) as any[]).map((r: any) => ({ ...mapLeadRow(r), type: "lead" })),
     ]);
   } catch (err: any) {
     log.error("Failed to look up prospects:", err.message);
@@ -351,9 +383,9 @@ router.get("/:id", async (req, res) => {
   try {
     log.info(`Getting prospect ${req.params.id}`);
     const id = req.params.id as string;
-    const prospect = await getTwenty<AgencyProspect>('agencyProspects', id);
+    const prospect = await getTwenty<AgencyProspect>(PROSPECT_OBJECT, id);
 
-    const mapped = mapProspectDetail(prospect);
+    const mapped = mapProspectDetailView(prospect);
 
     res.json(mapped);
   } catch (err: any) {
@@ -372,7 +404,8 @@ router.post("/", async (req: AuthRequest, res) => {
     const fullName = [first_name, last_name].filter(Boolean).join(" ").trim();
     const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
 
-    // Map our status to Twenty's coldCallStatus
+    // Map our status to the workspace's status column (coldCallStatus on
+    // agency objects, opportunityStatus on landOpportunities).
     const coldCallStatus = frontendStatusToTwenty(status, dnc);
 
     log.info(`Creating prospect: ${fullName}`);
@@ -403,41 +436,44 @@ router.post("/", async (req: AuthRequest, res) => {
       return;
     }
 
-    const payload = {
-      ...normalized.payload,
-      rating: 0,
-      reviewCount: 0,
-      externalId: undefined,
-      outboundState: tags?.[0],
-      coldCallStatus,
-      ...(notes ? { notes } : {}),
-      // Own-field member attribution (omitted for legacy/fallback sessions).
-      ...(req.workspaceMemberId ? { createdByMemberId: req.workspaceMemberId } : {}),
-    };
+    const payload: Record<string, unknown> = PROSPECT_OBJECT === "agencyProspects"
+      ? {
+          ...normalized.payload,
+          rating: 0,
+          reviewCount: 0,
+          externalId: undefined,
+          outboundState: tags?.[0],
+          coldCallStatus,
+          ...(notes ? { notes } : {}),
+          ...(req.workspaceMemberId ? { createdByMemberId: req.workspaceMemberId } : {}),
+        }
+      : frontendToOpportunityPayload({ first_name, last_name, phone, email, address, city, state, zip, status });
 
-    const result = await createTwenty<any>('agencyProspects', payload, await resolveActor(req));
+    const result = await createTwenty<any>(PROSPECT_OBJECT, payload, await resolveActor(req));
     const prospect = result.data || result;
 
-    const mapped = {
-      id: prospect.id,
-      first_name,
-      last_name,
-      phone,
-      email,
-      website,
-      address,
-      city,
-      state,
-      zip,
-      status: coldCallStatus === "DO_NOT_CONTACT" ? "do_not_contact" : "new",
-      source,
-      tags: tags || null,
-      notes: notes,
-      dnc: Boolean(dnc),
-      sync_id: prospect.externalId,
-      created_at: prospect.createdAt || new Date().toISOString(),
-      updated_at: prospect.updatedAt || new Date().toISOString(),
-    };
+    const mapped = PROSPECT_OBJECT === "agencyProspects"
+      ? {
+          id: prospect.id,
+          first_name,
+          last_name,
+          phone,
+          email,
+          website,
+          address,
+          city,
+          state,
+          zip,
+          status: coldCallStatus === "DO_NOT_CONTACT" ? "do_not_contact" : "new",
+          source,
+          tags: tags || null,
+          notes: notes,
+          dnc: Boolean(dnc),
+          sync_id: prospect.externalId,
+          created_at: prospect.createdAt || new Date().toISOString(),
+          updated_at: prospect.updatedAt || new Date().toISOString(),
+        }
+      : mapOpportunityCreateResult(prospect, { first_name, last_name, phone, email, address, city, state, zip, status, source, notes });
 
     log.info(`Created prospect ${prospect.id}`);
     res.status(201).json(mapped);
@@ -499,12 +535,12 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     // Status changes follow the contact pipeline (packages/shared
     // contact-status): a move it does not allow is refused with the reason.
     if (status !== undefined || dnc) {
-      const guard = await guardContactStatus("agencyProspects", req.params.id as string, status, { dnc, reopen: req.body?.reopen === true });
+      const guard = await guardContactStatus(PROSPECT_OBJECT, req.params.id as string, status, { dnc, reopen: req.body?.reopen === true });
       if (!guard.ok) {
         res.status(guard.status).json({ error: guard.reason, code: "INVALID_TRANSITION" });
         return;
       }
-      payload.coldCallStatus = guard.to;
+      payload[PROSPECT_OBJECT === "agencyProspects" ? "coldCallStatus" : "opportunityStatus"] = guard.to;
     }
 
     if (Object.keys(payload).length === 0) {
@@ -513,10 +549,10 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     }
 
     const id = req.params.id as string;
-    const result = await updateTwenty<any>('agencyProspects', id, payload, await resolveActor(req));
+    const result = await updateTwenty<any>(PROSPECT_OBJECT, id, payload, await resolveActor(req));
     const prospect = result.data || result;
 
-    const mapped = mapProspectUpdateResult(prospect);
+    const mapped = mapProspectUpdateView(prospect);
 
     log.info(`Updated prospect ${prospect.id}`);
     res.json(mapped);
@@ -531,7 +567,7 @@ router.delete("/:id", async (req, res) => {
     log.info(`Deleting prospect ${req.params.id}`);
     const id = req.params.id as string;
 
-    await deleteTwenty('agencyProspects', id);
+    await deleteTwenty(PROSPECT_OBJECT, id);
 
     log.info(`Deleted prospect ${id}`);
     res.status(204).end();
@@ -552,7 +588,7 @@ router.delete("/:id", async (req, res) => {
 router.get("/:id/website-status", async (req, res) => {
   try {
     const id = req.params.id as string;
-    const prospect = await getTwenty<AgencyProspect>('agencyProspects', id);
+    const prospect = await getTwenty<AgencyProspect>(PROSPECT_OBJECT, id);
 
     // Industry routing from the campaign row: linked campaign first, else the
     // campaign whose industryId matches the prospect label.
@@ -679,7 +715,7 @@ router.post("/:id/website-sent", async (req: AuthRequest, res) => {
     const id = req.params.id as string;
     const { templateUrl, offerUrl, fromNumber, body } = req.body ?? {};
     const sentAt = new Date().toISOString();
-    const current = await getTwenty<AgencyProspect>('agencyProspects', id);
+    const current = await getTwenty<AgencyProspect>(PROSPECT_OBJECT, id);
 
     // Same rules as the SPA (packages/shared outreach): an opted-out prospect
     // gets nothing, and a number only texts its own country.
@@ -699,7 +735,7 @@ router.post("/:id/website-sent", async (req: AuthRequest, res) => {
 
     let advancedLabel: string | null = null;
     if (event.changed) {
-      await updateTwenty('agencyProspects', id, { outboundLabel: event.to }, await resolveActor(req));
+      await updateTwenty(PROSPECT_OBJECT, id, { outboundLabel: event.to }, await resolveActor(req));
       advancedLabel = event.to;
     }
 
@@ -730,7 +766,7 @@ router.post("/:id/website-sent", async (req: AuthRequest, res) => {
 router.post("/:id/ensure-offer", async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
-    const prospect = await getTwenty<AgencyProspect>('agencyProspects', id);
+    const prospect = await getTwenty<AgencyProspect>(PROSPECT_OBJECT, id);
     const routing = await resolveIndustryRouting(prospect);
     if (!routing?.urlKey) {
       res.status(404).json({ error: "Industry not configured for prospect" });

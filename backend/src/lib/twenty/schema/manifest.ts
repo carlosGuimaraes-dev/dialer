@@ -33,7 +33,7 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
         { value: "NOT_INTERESTED", label: "Not Interested", color: "red" },
         { value: "CALLBACK", label: "Callback", color: "yellow" },
         { value: "CONVERTED", label: "Converted", color: "purple" },
-        { value: "DO_NOT_CONTACT", label: "Do Not Contact", color: "black" },
+        { value: "DO_NOT_CONTACT", label: "Do Not Contact", color: "crimson" },
       ] },
       { name: "country", type: "TEXT", label: "Country", description: "Country code or name", isNullable: false },
       { name: "createdByMemberId", type: "TEXT", label: "Created By Member ID" },
@@ -153,7 +153,7 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
         { value: "NOT_INTERESTED", label: "Not Interested", color: "red" },
         { value: "CALLBACK", label: "Callback", color: "yellow" },
         { value: "CONVERTED", label: "Converted", color: "purple" },
-        { value: "DO_NOT_CONTACT", label: "Do Not Contact", color: "black" },
+        { value: "DO_NOT_CONTACT", label: "Do Not Contact", color: "crimson" },
       ] },
       { name: "contactName", type: "TEXT", label: "Contact Name", description: "Human contact person name" },
       { name: "email", type: "EMAILS", label: "Email", description: "Contact email" },
@@ -170,7 +170,7 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
         { value: "CONTACTED", label: "Contacted", color: "blue" },
         { value: "QUALIFIED", label: "Qualified", color: "purple" },
         { value: "BOOKED", label: "Booked", color: "green" },
-        { value: "CONVERTED", label: "Converted", color: "emerald" },
+        { value: "CONVERTED", label: "Converted", color: "green" },
         { value: "LOST", label: "Lost", color: "red" },
       ] },
     ],
@@ -211,7 +211,7 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
       { name: "urlKey", type: "TEXT", label: "URL Key", description: "Short industry key used in /offer/:industry/:slug URLs (autobody/tint/detailing/general)." },
       { name: "utmSource", type: "SELECT", label: "UTM Source", description: "Attribution source for the campaign funnel.", options: [
         { value: "OUTBOUND", label: "Outbound", color: "blue" },
-        { value: "INBOUND", label: "Inbound", color: "emerald" },
+        { value: "INBOUND", label: "Inbound", color: "green" },
         { value: "BLENDED", label: "Blended", color: "purple" },
       ] },
     ],
@@ -490,6 +490,57 @@ export const SCHEMA_OBJECTS: SchemaObject[] = [
   },
 ];
 
+
+/**
+ * Wholesale workspace remap: fields the dialer adds to the business objects
+ * it borrows (landOpportunity acts as "prospect", buyer as "lead"). Only
+ * created when missing, so the workspace's own pipeline data is untouched.
+ * opportunityStatus / stage carry the contact pipeline states (NEW ...
+ * DO_NOT_CONTACT) so the same state machine guards both worlds.
+ */
+export const SCHEMA_WHOLESALE_FIELDS: SchemaObject[] = [
+  {
+    nameSingular: "landOpportunity",
+    namePlural: "landOpportunities",
+    labelSingular: "Land Opportunity",
+    labelPlural: "Land Opportunities",
+    description: "Wholesale property pipeline (dialer prospect role)",
+    icon: "IconMap",
+    fields: [
+      { name: "coldCallStatus", type: "SELECT", label: "Cold Call Status", description: "Dialer contact pipeline state (mirrors opportunityStatus vocabulary)", options: [
+        { value: "NEW", label: "New", color: "gray" },
+        { value: "CONTACTED", label: "Contacted", color: "blue" },
+        { value: "INTERESTED", label: "Interested", color: "green" },
+        { value: "NOT_INTERESTED", label: "Not Interested", color: "red" },
+        { value: "CALLBACK", label: "Callback", color: "yellow" },
+        { value: "CONVERTED", label: "Converted", color: "purple" },
+        { value: "DO_NOT_CONTACT", label: "Do Not Contact", color: "crimson" },
+      ] },
+      { name: "phone", type: "TEXT", label: "Owner Phone", description: "Seller/owner callback number (E.164)" },
+      { name: "email", type: "TEXT", label: "Owner Email" },
+    ],
+  },
+  {
+    nameSingular: "buyer",
+    namePlural: "buyers",
+    labelSingular: "Buyer",
+    labelPlural: "Buyers",
+    description: "Wholesale investor/buyer pipeline (dialer lead role)",
+    icon: "IconUsers",
+    fields: [
+      { name: "coldCallStatus", type: "SELECT", label: "Cold Call Status", description: "Dialer contact pipeline state (mirrors stage vocabulary)", options: [
+        { value: "NEW", label: "New", color: "gray" },
+        { value: "CONTACTED", label: "Contacted", color: "blue" },
+        { value: "INTERESTED", label: "Interested", color: "green" },
+        { value: "NOT_INTERESTED", label: "Not Interested", color: "red" },
+        { value: "CALLBACK", label: "Callback", color: "yellow" },
+        { value: "CONVERTED", label: "Converted", color: "purple" },
+        { value: "DO_NOT_CONTACT", label: "Do Not Contact", color: "crimson" },
+      ] },
+    ],
+  },
+];
+
 /** Created after every object exists, from the MANY_TO_ONE side. */
 export const SCHEMA_RELATIONS: SchemaRelation[] = [
   {
@@ -653,4 +704,5 @@ export const SCHEMA_RELATIONS: SchemaRelation[] = [
   },
 ];
 
-export const SCHEMA_MANIFEST: SchemaManifest = { objects: SCHEMA_OBJECTS, relations: SCHEMA_RELATIONS };
+/** The dialer-owned objects, plus fields added onto the wholesale business objects. */
+export const SCHEMA_MANIFEST: SchemaManifest = { objects: [...SCHEMA_OBJECTS, ...SCHEMA_WHOLESALE_FIELDS], relations: SCHEMA_RELATIONS };

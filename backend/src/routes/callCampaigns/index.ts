@@ -6,6 +6,8 @@ import { resolveActor } from "../../lib/twenty/actor/index.js";
 import { createLogger } from "../../lib/logger/index.js";
 import { CAMPAIGN_STATUSES, mapCampaign, parseContactIds, type CallCampaignRecord } from "./helpers.js";
 
+import { OBJECTS } from "../../lib/wholesale/objects.js";
+const OBJECT = OBJECTS.callCampaigns as string;
 const router = Router();
 router.use(authMiddleware);
 const log = createLogger("call-campaigns");
@@ -31,7 +33,7 @@ function fail(res: any, err: any, action: string) {
 /** GET /api/call-campaigns - every campaign, newest first. */
 router.get("/", async (_req, res) => {
   try {
-    const rows = await listTwentyAll<CallCampaignRecord>("callCampaigns");
+    const rows = await listTwentyAll<CallCampaignRecord>(OBJECT);
     res.json(rows.map(mapCampaign).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   } catch (err) {
     fail(res, err, "load call campaigns");
@@ -48,7 +50,7 @@ router.post("/", async (req: AuthRequest, res) => {
   const name = String(req.body?.name ?? "").trim() || new Date().toISOString().slice(0, 16).replace("T", " ");
   try {
     const created = await createTwenty<CallCampaignRecord>(
-      "callCampaigns",
+      OBJECT,
       {
         name,
         status: callCampaignMachine.initial,
@@ -88,7 +90,7 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     return;
   }
   try {
-    const updated = await updateTwenty<CallCampaignRecord>("callCampaigns", req.params.id as string, patch, await resolveActor(req));
+    const updated = await updateTwenty<CallCampaignRecord>(OBJECT, req.params.id as string, patch, await resolveActor(req));
     res.json(mapCampaign(updated));
   } catch (err) {
     fail(res, err, "update the call campaign");
@@ -98,7 +100,7 @@ router.patch("/:id", async (req: AuthRequest, res) => {
 /** DELETE /api/call-campaigns/:id - statistics and history go with it. */
 router.delete("/:id", async (req, res) => {
   try {
-    await deleteTwenty("callCampaigns", req.params.id as string);
+    await deleteTwenty(OBJECT, req.params.id as string);
     res.status(204).end();
   } catch (err) {
     fail(res, err, "delete the call campaign");

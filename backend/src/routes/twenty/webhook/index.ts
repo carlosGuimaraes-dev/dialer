@@ -7,6 +7,9 @@ import {
   wasRecentlyNotified,
 } from "../../../lib/leads/notify/index.js";
 import { isNewLeadEvent, recordIdFrom, verifySignature } from "./helpers/index.js";
+import { OBJECTS } from "../../../lib/wholesale/objects.js";
+
+const LEAD_OBJECT = OBJECTS.leads as string;
 import type { TwentyWebhookBody } from "./types.js";
 
 const router = Router();
@@ -74,7 +77,7 @@ router.post("/", async (req: Request, res: Response) => {
   markLeadNotified(leadId);
 
   try {
-    const lead = await getTwenty<any>("agencyLeads", leadId);
+    const lead = await getTwenty<any>(LEAD_OBJECT, leadId);
     const contactName =
       lead.contactName ||
       [lead.firstName, lead.lastName].filter(Boolean).join(" ") ||

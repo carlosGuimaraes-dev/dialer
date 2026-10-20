@@ -1,5 +1,5 @@
 /** Twenty sends every object event; only new leads become a push. */
-const CREATED_LEAD_EVENTS = new Set(["agencyLead.created", "agencyLeads.created"]);
+const CREATED_LEAD_EVENTS = new Set(["agencyLead.created", "agencyLeads.created", "buyer.created", "buyers.created", "landOpportunity.created", "landOpportunities.created"]);
 
 /** Pure: true when this event should trigger the new-lead broadcast. */
 export function isNewLeadEvent(event: unknown): event is string {
