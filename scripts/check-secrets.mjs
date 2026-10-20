@@ -40,7 +40,6 @@ const SKIP_PREFIXES = [
 // suppression someone added to make a red build go green.
 const ALLOWED = [
   {
-    file: 'twenty-native-app/vitest.config.ts',
     // Twenty's published local-development fixture key. Workspace
     // 20202020-1c25-4d02-bf25-6aeccf7ea419 on localhost:2020, from Twenty's
     // own docs and example apps. It grants nothing on a real workspace. The

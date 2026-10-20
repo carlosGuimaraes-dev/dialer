@@ -33,7 +33,6 @@ const SKIP_PREFIXES = [
   'build/',
   'docs/',
   'frontend/public/',
-  'railcode/frontend/public/',
 ];
 
 const MONO_REGEX = /\bfont-mono\b|monospace/i;

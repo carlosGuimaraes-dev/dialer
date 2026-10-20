@@ -35,7 +35,6 @@ const SKIP_PREFIXES = [
   'docs/typesafe/',
   'docs/xstate/upstream/',
   'frontend/public/fonts/',
-  'railcode/frontend/public/fonts/',
 ];
 
 // Copyright, registered and trademark symbols are not emojis.

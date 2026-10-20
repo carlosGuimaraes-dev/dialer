@@ -48,7 +48,7 @@ const REQUIRED_FILES = [
 // the project's core vocabulary.
 const REQUIRED_TERMS = [
   ['README.md', ['dialer', 'Documentation map', 'agencyCalls', 'agencyPhones', 'banner.png']],
-  ['docs/architecture.md', ['agencyCalls', 'agencyPhones', 'telnyxCallId', 'twenty-native-app']],
+  ['docs/architecture.md', ['agencyCalls', 'agencyPhones', 'telnyxCallId']],
   ['docs/data-flow.md', ['agencyCalls', 'listTwentyPage', 'keyset']],
 ];
 

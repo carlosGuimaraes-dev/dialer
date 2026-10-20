@@ -26,7 +26,7 @@ if (process.env.SKIP_ROUNDED_CHECK) {
 const SCAN_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.css', '.scss', '.html', '.vue', '.svelte']);
 
 // Vendored trees and build output are not ours to restyle.
-const SKIP_PREFIXES = ['node_modules/', 'dist/', 'build/', 'docs/', 'frontend/public/', 'railcode/frontend/public/'];
+const SKIP_PREFIXES = ['node_modules/', 'dist/', 'build/', 'docs/', 'frontend/public/'];
 
 const RULES = [
   /\brounded(-[trbsexy]{1,2})?-full\b/,
