@@ -86,10 +86,11 @@ function textOrNull(v: unknown): string | null {
 
 /** The seller lot a person owns, whichever shape the relation arrives in. */
 function ownedLotId(r: AgencyPersonRecord): string | null {
-  const owner = r.ownedLandOpportunities;
+  const owner = r.ownedLandOpportunities as any;
   if (typeof owner === "string") return owner;
   if (Array.isArray(owner)) return owner[0]?.id ?? null;
-  return owner?.id ?? null;
+  // A connection arrives as { edges: [{ node }] }.
+  return owner?.edges?.[0]?.node?.id ?? owner?.id ?? null;
 }
 
 export function mapPerson(r: AgencyPersonRecord): Person {

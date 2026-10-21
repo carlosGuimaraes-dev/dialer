@@ -65,7 +65,8 @@ const personCompanyId = (r: any): string | null => {
   const owner = r?.[PERSON_OWNER_FIELD];
   if (typeof owner === "string") return owner;
   if (Array.isArray(owner)) return owner[0]?.id ?? null;
-  return null;
+  // A connection arrives as { edges: [{ node }] }.
+  return owner?.edges?.[0]?.node?.id ?? owner?.id ?? null;
 };
 
 /** Row -> Contacts table entry, whatever object backs "prospect" today. */
@@ -157,10 +158,17 @@ router.get("/page", async (req, res) => {
     const { offset, limit } = pageWindow(params);
     const client: any = twentyGraphqlClient();
 
-    const PROSPECT_NODE = { __scalar: true, phoneNumber: { __scalar: true }, primaryPhone: { __scalar: true }, videoUrl: { __scalar: true } };
+    // landOpportunity keeps the owner callback number in one TEXT column and has
+    // no videoUrl; asking for the agencyProspect fields makes Twenty reject the
+    // whole contacts query.
+    const PROSPECT_NODE = PROSPECT_OBJECT === "agencyProspects"
+      ? { __scalar: true, phoneNumber: { __scalar: true }, primaryPhone: { __scalar: true }, videoUrl: { __scalar: true } }
+      : { __scalar: true };
     // A buyer keeps its phone and email on its point of contact, not on the row.
+    // COMPOSITE fields (name, phones, emails) are not covered by __scalar: they
+    // have to be listed, or the row arrives with every contact detail empty.
     const LEAD_NODE = LEAD_OBJECT === "buyers"
-      ? { __scalar: true, pointOfContact: { __scalar: true, phones: { __scalar: true }, emails: { __scalar: true } } }
+      ? { __scalar: true, pointOfContact: { name: { firstName: true, lastName: true }, phones: { primaryPhoneNumber: true, primaryPhoneCallingCode: true, primaryPhoneCountryCode: true }, emails: { primaryEmail: true } } }
       : { __scalar: true, email: { __scalar: true }, phone: { __scalar: true } };
     // Last call filter: the contacts whose newest call ended that way, or
     // (Never called) every contact without a call.
@@ -202,7 +210,14 @@ router.get("/page", async (req, res) => {
       }
       peq = prospectIds && prospectIds.length === 0 ? null : personGqlQuery(params, prospectIds, PERSON_OWNER_FIELD);
     }
-    const PERSON_NODE = { __scalar: true, phones: { __scalar: true }, emails: { __scalar: true }, ...(PERSON_OWNER_FIELD === "prospectId" ? {} : { [PERSON_OWNER_FIELD]: { __scalar: true } }) };
+    const PERSON_NODE = {
+      __scalar: true,
+      name: { firstName: true, lastName: true },
+      phones: { primaryPhoneNumber: true, primaryPhoneCallingCode: true, primaryPhoneCountryCode: true, additionalPhones: true },
+      emails: { primaryEmail: true, additionalEmails: true },
+      // The lot relation is a connection, not a single record: read the first edge.
+      ...(PERSON_OWNER_FIELD === "prospectId" ? {} : { [PERSON_OWNER_FIELD]: { edges: { node: { id: true } } } }),
+    };
 
     const fetchSlice = async (object: string, q: { filter?: unknown; orderBy: unknown }, node: object, first: number, skip: number) => {
       const r: any = await client.query({

@@ -8,7 +8,9 @@ import { realPhone } from "./placeholders.js";
 function ownedLotId(owner: AgencyPersonRecord["ownedLandOpportunities"]): string | null {
   if (typeof owner === "string") return owner;
   if (Array.isArray(owner)) return owner[0]?.id ?? null;
-  return owner?.id ?? null;
+  // A connection arrives as { edges: [{ node }] }.
+  const connection = owner as unknown as { edges?: { node?: { id?: string } }[] };
+  return connection?.edges?.[0]?.node?.id ?? owner?.id ?? null;
 }
 
 export function mapPersonListItem(r: AgencyPersonRecord) {

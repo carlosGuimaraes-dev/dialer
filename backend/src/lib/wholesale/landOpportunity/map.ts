@@ -134,7 +134,8 @@ export function mapOpportunityListItem(r: LandOpportunityRecord) {
     email: null,
     city: r.city ?? null,
     state: r.state ?? null,
-    country: r.state ?? null,
+    // landOpportunity has no country column: leave it null rather than echo the state.
+    country: null,
     status: opportunityToFrontendStatus(r),
     created_at: r.createdAt ?? null,
     updated_at: r.updatedAt ?? null,
