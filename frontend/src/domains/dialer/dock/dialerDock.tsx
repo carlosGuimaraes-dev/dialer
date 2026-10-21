@@ -50,6 +50,7 @@ import { usePersistedState } from "@/domains/app/persistedState";
 import { DEFAULT_UNANSWERED_TIMEOUT_SECONDS, UNANSWERED_TIMEOUT_CHOICES, getUnansweredTimeoutSeconds, setUnansweredTimeoutSeconds } from "@/domains/app/config";
 import { useCalls } from "@/domains/calls/data";
 import { contactsApi, contactName, memberOptions, resolveMember, useContactFacets, useProspectLookup, type ContactRow } from "@/domains/contact/list";
+import { ROLE_LABELS } from "@/domains/contact/model";
 import { lineCountry, lineRegion, pickCallLine } from "@/domains/dialer/route";
 import { DockContactPanel } from "@/domains/dialer/contactPanel";
 import { regionOfCountry } from "@dialer/shared";
@@ -666,10 +667,10 @@ function ContactsTab() {
       .sort((a, b) => b[1] - a[1])
       .map(([raw, n]) => ({ value: raw, label: raw, hint: n }));
   const typeOptions: DockFilterOption[] = [
-    { value: "prospect", label: "Prospects", hint: facets?.type?.prospect },
-    { value: "lead", label: "Leads", hint: facets?.type?.lead },
-    // Decision makers (agencyPeople): dialled on their own line, logged on their company.
-    { value: "person", label: "People", hint: facets?.type?.person },
+    { value: "prospect", label: ROLE_LABELS.prospect.many, hint: facets?.type?.prospect },
+    { value: "lead", label: ROLE_LABELS.lead.many, hint: facets?.type?.lead },
+    // Decision makers: dialled on their own line, logged on their company.
+    { value: "person", label: ROLE_LABELS.person.many, hint: facets?.type?.person },
   ];
   // Id- and option-valued filters, with "none" for records that have no value.
   const namedOptions = (counts: Record<string, number> | undefined, label: (raw: string) => string, none: string): DockFilterOption[] => [

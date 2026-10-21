@@ -26,7 +26,7 @@ import { CountryBadge, CountryFlag } from "@/domains/country/badge";
 import { countryCode, countryName } from "@/domains/country/lookup";
 import { timeAgo } from "@/domains/admin/data";
 import { useAuth } from "@/domains/auth/provider";
-import { initials } from "@/domains/contact/model";
+import { initials, ROLE_LABELS } from "@/domains/contact/model";
 import { memberOptions, resolveMember, type MemberOption } from "./memberOptions";
 import {
   contactName,
@@ -71,10 +71,10 @@ const TWENTY_STATUS: Record<string, string> = {
 };
 
 const TYPE_META: Record<ContactRowType, { label: string; icon: typeof Users; color: string }> = {
-  prospect: { label: "Prospect", icon: Users, color: "text-blue-600" },
-  lead: { label: "Lead", icon: User, color: "text-violet-600" },
-  // A decision maker (agencyPerson) at a prospect: shown with their company, dialled on their own line.
-  person: { label: "Person", icon: User, color: "text-emerald-600" },
+  prospect: { label: ROLE_LABELS.prospect.one, icon: Users, color: "text-blue-600" },
+  lead: { label: ROLE_LABELS.lead.one, icon: User, color: "text-violet-600" },
+  // A decision maker at a lot: shown with their company, dialled on their own line.
+  person: { label: ROLE_LABELS.person.one, icon: User, color: "text-emerald-600" },
 };
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -433,10 +433,10 @@ export function ProspectPage() {
         info={{
           title: "All Contacts",
           icon: Users,
-          what: "Every prospect and lead in Twenty. Rows load as you scroll; search and filters run in Twenty, so even huge lists stay fast.",
+          what: "Every seller lot and builder in Twenty. Rows load as you scroll; search and filters run in Twenty, so even huge lists stay fast.",
           key: [
-            { color: "#2563eb", label: "Prospect", note: "from lead lists / scraping" },
-            { color: "#7c3aed", label: "Lead", note: "came in to you" },
+            { color: "#2563eb", label: ROLE_LABELS.prospect.one, note: "a parcel with an owner to call" },
+            { color: "#7c3aed", label: ROLE_LABELS.lead.one, note: "a builder looking for lots" },
           ],
           use: "Status is where a contact is in your pipeline; Last call shows how the most recent call ended.",
         }}

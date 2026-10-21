@@ -6,6 +6,7 @@ import { SelectMenu } from "@/domains/ui/menu";
 import { Modal } from '@/domains/ui/modal';
 import { Button } from '@/domains/ui/legacyButton';
 import { Input } from '@/domains/ui/input';
+import { ROLE_LABELS } from "@/domains/contact/model";
 
 interface LeadFormData {
   first_name: string;
@@ -96,14 +97,14 @@ export function LeadForm({ onClose, onSubmit, initialData }: LeadFormProps) {
     <Modal
       open={true}
       onClose={onClose}
-      title={initialData?.first_name ? 'Edit Lead' : 'New Lead'}
+      title={initialData?.first_name ? `Edit ${ROLE_LABELS.lead.one}` : `New ${ROLE_LABELS.lead.one}`}
       footer={
         <div className="flex justify-end gap-3">
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" form="lead-form">
-            Save Lead
+            Save
           </Button>
         </div>
       }

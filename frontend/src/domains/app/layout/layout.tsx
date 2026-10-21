@@ -12,6 +12,7 @@ import { AudioBridgeProvider } from '@/domains/dialer/audio';
 import { DialerProvider } from '@/domains/dialer/provider';
 import { MusicPlayerProvider } from '@/domains/music/player';
 import { DialerDock, DialerTopButton } from '@/domains/dialer/dock';
+import { roleLabel } from '@/domains/contact/model';
 import {
   BarChart3,
   Users,
@@ -37,7 +38,7 @@ interface NavItem {
 const navGroups: NavItem[][] = [
   [
     { to: '/reports', label: 'Reports', icon: BarChart3 },
-    { to: '/contacts', label: 'Contacts', icon: Users },
+    { to: '/contacts', label: 'Seller Lots', icon: Users },
   ],
   [
     { to: '/scripts', label: 'Scripts', icon: FileText },
@@ -255,7 +256,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     className="flex items-center gap-1.5 text-[var(--ods-text-secondary,#575757)] hover:text-[var(--ods-text-primary,#18181b)] transition-colors"
                   >
                     <Users className="w-3.5 h-3.5 opacity-70" />
-                    <span>Leads</span>
+                    <span>{roleLabel("lead", true)}</span>
                   </button>
                   <span className="text-[var(--ods-text-tertiary,#8a8a93)]">/</span>
                   <span className="font-semibold text-[var(--ods-text-primary,#18181b)] truncate max-w-[200px]">
@@ -272,7 +273,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     className="flex items-center gap-1.5 text-[var(--ods-text-secondary,#575757)] hover:text-[var(--ods-text-primary,#18181b)] transition-colors"
                   >
                     <Users className="w-3.5 h-3.5 opacity-70" />
-                    <span>Contacts</span>
+                    <span>{roleLabel("prospect", true)}</span>
                   </button>
                   <span className="text-[var(--ods-text-tertiary,#8a8a93)]">/</span>
                   <span className="font-semibold text-[var(--ods-text-primary,#18181b)] truncate max-w-[200px]">
