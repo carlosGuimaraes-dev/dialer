@@ -307,7 +307,7 @@ export function ContactSidebar({
 
         <ContactPeople contact={contact} />
 
-        {contact.type === "lead" ? <BuilderMatchesSection landOpportunityId={contact.id} /> : <BuyboxesSection buyerId={contact.id} />}
+        {contact.type === "lead" ? <BuyboxesSection buyerId={contact.id} /> : <BuilderMatchesSection landOpportunityId={contact.id} />}
 
         {/* field search */}
         <div className="flex items-center gap-2">
