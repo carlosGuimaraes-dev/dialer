@@ -109,7 +109,7 @@ export function callStats(call: CallLike, conversationSeconds: number): Stat[] {
       label: "Sentiment",
       value: call.aiSentiment ? String(call.aiSentiment).charAt(0) + String(call.aiSentiment).slice(1).toLowerCase() : DASH,
       icon: MessageSquare,
-      tip: { title: "Sentiment", what: "How the prospect felt about the call, read from the transcript." },
+      tip: { title: "Sentiment", what: "How the seller felt about the call, read from the transcript." },
     },
     {
       label: "Agent",

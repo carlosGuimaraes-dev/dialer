@@ -57,11 +57,11 @@ export function RatingBadge({ sentiment, score }: { sentiment: string | null; sc
 }
 
 const SCORE_ROWS: Array<{ key: keyof QualityScores; label: string; hint: string }> = [
-  { key: "conversion", label: "Conversion Probability", hint: "Likelihood this prospect converts, based on interest signals in the call." },
+  { key: "conversion", label: "Conversion Probability", hint: "Likelihood this seller converts, based on interest signals in the call." },
   { key: "politeness", label: "Politeness & Rapport", hint: "Agent courtesy and rapport building during the call." },
   { key: "questioning", label: "Questioning Effectiveness", hint: "Quality of discovery questions asked by the agent." },
-  { key: "engagement", label: "Contact Engagement", hint: "How engaged and responsive the prospect was." },
-  { key: "sentiment", label: "Sentiment", hint: "The prospect's overall feeling about the call." },
+  { key: "engagement", label: "Contact Engagement", hint: "How engaged and responsive the seller was." },
+  { key: "sentiment", label: "Sentiment", hint: "The seller's overall feeling about the call." },
 ];
 
 const SCORE_TONE = (v: number) =>

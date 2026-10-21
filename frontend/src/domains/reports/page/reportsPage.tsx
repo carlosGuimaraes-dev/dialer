@@ -252,7 +252,7 @@ function Overview({ calls, range, goal, threshold }: { calls: ReportCall[]; rang
               title: "Average call",
               what: `How long a connected call lasts on average (${t.connected} connected call${t.connected === 1 ? "" : "s"}).`,
               formula: ["Talk time", "÷", "Connected calls", "=", "Avg call"],
-              use: "Longer calls usually mean more engaged prospects.",
+              use: "Longer calls usually mean more engaged sellers.",
             },
           },
         ]}
@@ -736,7 +736,7 @@ function DispositionTab({ calls }: { calls: ReportCall[] }) {
             icon: Timer,
             what: "How long calls with each outcome last on average.",
             formula: ["Talk time", "÷", "Calls", "per", "Disposition"],
-            use: "Longer calls usually mean more engaged prospects.",
+            use: "Longer calls usually mean more engaged sellers.",
           }}
         >
           <BarChart

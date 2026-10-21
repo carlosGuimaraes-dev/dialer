@@ -133,7 +133,7 @@ export function WebsitePanel({ prospectId, prospectPhone, prospectCountry }: { p
     return (
       <div className="p-3">
         <Notice tone="neutral" title="No offer site in this workspace">
-          {status.reason ?? "The page we send is only configured for agency prospects."}
+          {status.reason ?? "This workspace has no offer page configured for seller lots."}
         </Notice>
       </div>
     );
@@ -181,7 +181,7 @@ export function WebsitePanel({ prospectId, prospectPhone, prospectCountry }: { p
               <div className="relative w-full aspect-[4/3] overflow-hidden bg-[var(--ods-bg-secondary)]">
                 {/* rendered at desktop width and scaled down, so it looks like the real page */}
                 <iframe
-                  title="Prospect page preview"
+                  title="Offer page preview"
                   src={status.page.url}
                   loading="lazy"
                   sandbox="allow-scripts allow-same-origin"
@@ -203,7 +203,7 @@ export function WebsitePanel({ prospectId, prospectPhone, prospectCountry }: { p
             <Globe className="w-3.5 h-3.5" aria-hidden="true" />
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold">Prospect page</div>
+            <div className="text-[13px] font-semibold">Offer page</div>
             <div className="text-[12px] text-[var(--ods-text-tertiary)] truncate" title={status.page.url}>
               {shortUrl(status.page.url)}
             </div>

@@ -8,7 +8,7 @@ export const EXPERIMENTAL_FEATURES: { key: ExperimentalFeature; label: string; d
   {
     key: "websitePreview",
     label: "Website preview",
-    description: "The Website and video panel on a prospect's page: a preview of their offer page, its video, and texting them the link.",
+    description: "The Website and video panel on a seller lot's page: a preview of the offer page, its video, and texting the link.",
     icon: Globe,
   },
   {

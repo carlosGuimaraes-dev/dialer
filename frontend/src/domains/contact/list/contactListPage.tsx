@@ -305,7 +305,7 @@ export function ProspectPage() {
     const companyOf = new Map(rows.filter((r) => r.type === "person").map((r) => [r.id, r.prospectId ?? null]));
     const prospectIds = [...new Set(ids.map((id) => (typeOf.get(id) === "person" ? companyOf.get(id) : typeOf.get(id) === "lead" ? null : id)).filter((x): x is string => !!x))];
     if (prospectIds.length === 0) {
-      toastWarning("No prospects selected", "Call campaigns dial prospects; leads can be called from their own page.");
+      toastWarning("No seller lots selected", "Call campaigns dial seller lots; builders can be called from their own page.");
       return;
     }
     try {
@@ -313,7 +313,7 @@ export function ProspectPage() {
       clearSelection();
       setCampaignModal({ open: true, campaignId: created.id });
       const leadsLeft = ids.filter((id) => typeOf.get(id) === "lead").length;
-      if (leadsLeft) success("Campaign created", `${leadsLeft} lead(s) were left out; campaigns dial prospects.`);
+      if (leadsLeft) success("Campaign created", `${leadsLeft} builder(s) were left out; campaigns dial seller lots.`);
     } catch (err) {
       toastError("Campaign not created", describeError(err).detail);
     }
