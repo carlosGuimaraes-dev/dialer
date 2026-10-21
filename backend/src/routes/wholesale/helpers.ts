@@ -16,8 +16,15 @@ export interface BuilderMatchRecord {
   buybox?: BuyboxRecord | null;
 }
 
-/** A CURRENCY column: { amount, currencyCode } or, from older rows, a bare number. */
-export type Money = { amount?: number | string | null; currencyCode?: string | null } | number | null | undefined;
+/**
+ * A CURRENCY column as Twenty sends it: { amountMicros, currencyCode } over
+ * REST, { amount } over GraphQL, or a bare number on hand-written rows.
+ */
+export type Money =
+  | { amountMicros?: number | string | null; amount?: number | string | null; currencyCode?: string | null }
+  | number
+  | null
+  | undefined;
 
 export interface BuyboxRecord {
   id: string;
@@ -35,11 +42,15 @@ export interface BuyboxRecord {
   buyer?: { id: string; name?: string | null } | null;
 }
 
-/** CURRENCY arrives as { amount, currencyCode } or as a plain number. */
+/** CURRENCY arrives as micros, as whole units, or as a plain number. */
 export function amount(v: Money): number | null {
   if (typeof v === "number") return v;
+  if (v?.amountMicros !== null && v?.amountMicros !== undefined && v.amountMicros !== "") {
+    const micros = Number(v.amountMicros);
+    if (Number.isFinite(micros)) return micros / 1_000_000;
+  }
   const n = Number(v?.amount);
-  return Number.isFinite(n) ? n : null;
+  return v?.amount !== null && v?.amount !== undefined && v.amount !== "" && Number.isFinite(n) ? n : null;
 }
 
 /** MULTI_SELECT values arrive as ["A", "B"] or "A,B"; both become a list. */

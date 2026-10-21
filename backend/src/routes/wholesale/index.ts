@@ -26,7 +26,8 @@ router.get("/matches", async (req, res) => {
     const rows = await listTwenty<BuilderMatchRecord>("builderMatches", {
       limit: 50,
       filter: `landOpportunityId[eq]:"${id}"`,
-      query: { order_by: "matchScore[DescNullsLast]" },
+      // depth=1 brings the buybox and builder nested, so the panel needs no second call.
+      query: { order_by: "matchScore[DescNullsLast]", depth: "1" },
     });
     res.json(rows.map(mapBuilderMatch));
   } catch (err) {

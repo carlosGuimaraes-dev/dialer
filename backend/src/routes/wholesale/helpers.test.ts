@@ -7,7 +7,7 @@ test("a buybox maps its money, size and geography for the panel", () => {
     id: "b",
     name: "  North Texas  ",
     status: "ACTIVE",
-    minPrice: { amount: 25000, currencyCode: "USD" },
+    minPrice: { amountMicros: 25_000_000_000, currencyCode: "USD" },
     maxPrice: 120000,
     minLotSizeSqFt: 5000,
     states: ["TX", "OK"],
@@ -56,4 +56,12 @@ test("amount and values tolerate the shapes Twenty sends", () => {
   assert.equal(amount({}), null);
   assert.deepEqual(values(["A", "", 3]), ["A"]);
   assert.deepEqual(values(""), []);
+});
+
+test("money is read from micros, from whole units, or from a bare number", () => {
+  assert.equal(amount({ amountMicros: 25_000_000_000 }), 25000);
+  assert.equal(amount({ amount: 120000 }), 120000);
+  assert.equal(amount(9000), 9000);
+  assert.equal(amount({ currencyCode: "USD" }), null);
+  assert.equal(amount(null), null);
 });
