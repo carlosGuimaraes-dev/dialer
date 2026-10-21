@@ -6,11 +6,14 @@ import { createLogger } from "../../lib/logger/index.js";
 import { UUID, mapPerson, personPayload, type AgencyPersonRecord } from "./helpers.js";
 
 /**
- * The people at a business (agencyPerson). A prospect has many, through
- * agencyPerson.prospectId; a lead points at one, through agencyLead.personId.
+ * People in the workspace. A seller lot owns one through landOpportunity.ownerContact,
+ * a buyer points at one through buyer.pointOfContact; the reverse relations
+ * (person.ownedLandOpportunities, person.buyers) list them from the person's side.
  */
 import { OBJECTS } from "../../lib/wholesale/objects.js";
 const PERSON_OBJECT = OBJECTS.people as string;
+const PROSPECT_OBJECT = OBJECTS.prospects as string;
+const LEAD_OBJECT = OBJECTS.leads as string;
 const router = Router();
 router.use(authMiddleware);
 const log = createLogger("people");
@@ -21,17 +24,23 @@ router.get("/", async (req, res) => {
   const leadId = String(req.query.leadId ?? "");
   try {
     if (UUID.test(prospectId)) {
-      const rows = await listTwenty<AgencyPersonRecord>(PERSON_OBJECT, { limit: 50, filter: `prospectId[eq]:"${prospectId}"` });
+      // Reverse relation: Twenty rejects a filter on a column the object lacks.
+      const rows = await listTwenty<AgencyPersonRecord>(PERSON_OBJECT, {
+        limit: 50,
+        filter: `ownedLandOpportunities.id[eq]:"${prospectId}"`,
+        // depth=1 so ownedLandOpportunities comes back and mapPerson can read the lot id.
+        query: { depth: "1" },
+      });
       res.json(rows.map(mapPerson));
       return;
     }
     if (UUID.test(leadId)) {
-      const lead = await getTwenty<{ personId?: string | null }>("agencyLeads", leadId);
-      if (!lead?.personId) {
+      const lead = await getTwenty<{ pointOfContactId?: string | null }>(LEAD_OBJECT, leadId);
+      if (!lead?.pointOfContactId) {
         res.json([]);
         return;
       }
-      res.json([mapPerson(await getTwenty<AgencyPersonRecord>(PERSON_OBJECT, lead.personId))]);
+      res.json([mapPerson(await getTwenty<AgencyPersonRecord>(`${PERSON_OBJECT}/`, lead.pointOfContactId))]);
       return;
     }
     res.status(400).json({ error: "Pass prospectId or leadId" });
@@ -51,11 +60,12 @@ router.post("/", async (req: AuthRequest, res) => {
   }
   const prospectId = String(body.prospectId ?? "");
   const leadId = String(body.leadId ?? "");
-  if (UUID.test(prospectId)) payload.prospectId = prospectId;
   try {
     const actor = await resolveActor(req);
     const created = await createTwenty<AgencyPersonRecord>(PERSON_OBJECT, payload, actor);
-    if (UUID.test(leadId)) await updateTwenty("agencyLeads", leadId, { personId: created.id }, actor);
+    // Attach the person from the side that owns the relation.
+    if (UUID.test(prospectId)) await updateTwenty(PROSPECT_OBJECT, prospectId, { ownerContactId: created.id }, actor);
+    if (UUID.test(leadId)) await updateTwenty(LEAD_OBJECT, leadId, { pointOfContactId: created.id }, actor);
     res.status(201).json(mapPerson(created));
   } catch (err: any) {
     log.error(`create person failed: ${err?.message}`);

@@ -6,7 +6,7 @@ import { hasCompanyFilter, personGqlQuery } from "./queryGql.js";
 
 test("a decision maker becomes a person row with a dialable number", () => {
   const row = mapPersonListItem({
-    id: "p1", name: "Ana Ruiz Lopez", jobTitle: "VP Logistics", prospectId: "c1",
+    id: "p1", name: { firstName: "Ana", lastName: "Ruiz Lopez" }, jobTitle: "VP Logistics", ownedLandOpportunities: [{ id: "c1" }],
     phones: { primaryPhoneNumber: "2015550123", primaryPhoneCallingCode: "+1" },
     emails: { primaryEmail: "ana@acme.com" },
   });
@@ -17,7 +17,7 @@ test("a decision maker becomes a person row with a dialable number", () => {
   assert.equal(row.email, "ana@acme.com");
   // 555-01xx is fictional: never dialled.
   assert.equal(row.phone, null);
-  assert.equal(mapPersonListItem({ id: "p2", name: "Bo", phones: { primaryPhoneNumber: "4845718730", primaryPhoneCallingCode: "+1" } }).phone, "+14845718730");
+  assert.equal(mapPersonListItem({ id: "p2", name: { firstName: "Bo" }, phones: { primaryPhoneNumber: "4845718730", primaryPhoneCallingCode: "+1" } }).phone, "+14845718730");
 });
 
 test("people are opt-in: only the Type filter brings them in", () => {

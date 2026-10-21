@@ -12,7 +12,7 @@ import { useOptimisticDelete, useOptimisticUpdate } from "@/domains/api/optimist
 
 export type ContactType = "prospect" | "lead";
 /**
- * A row in the Contacts table: a prospect, a lead, or a person (agencyPerson, a decision maker at a prospect).
+ * A row in the Contacts table: a prospect, a lead, or a person (a decision maker at a seller lot).
  * People are opt-in (Type -> People); a person row carries its company's prospectId, where calls and campaigns live.
  */
 export type ContactRowType = ContactType | "person";

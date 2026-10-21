@@ -360,7 +360,7 @@ export const api = {
     delete: (id: string) => request<void>(`/api/call-campaigns/${id}`, { method: "DELETE" }),
   },
 
-  /** People at a business (agencyPerson): many per prospect, one per lead. */
+  /** People linked to a record (person): many per seller lot, one per buyer. */
   people: {
     list: (params: { prospectId?: string; leadId?: string }) =>
       request<Person[]>(`/api/people?${new URLSearchParams(params as Record<string, string>).toString()}`),

@@ -57,7 +57,7 @@ export function ContactPeople({ contact }: { contact: Contact }) {
       count={isLoading ? null : people.length}
       collapsed={!open}
       onToggle={() => setOpen(!open)}
-      tip={{ title: "People", icon: Users, what: "The people at this business, stored in Twenty as agencyPerson. Call, email or edit them here; every change is recorded in Record history." }}
+      tip={{ title: "People", icon: Users, what: "The people linked to this record, stored in Twenty as person. Call, email or edit them here; every change is recorded in Record history." }}
       action={
         canAdd ? (
           <Button

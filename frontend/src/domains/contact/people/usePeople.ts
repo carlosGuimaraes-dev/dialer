@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type Person } from "@/domains/api/client";
 import type { Contact } from "@/domains/contact/model";
 
-/** The people at this business (agencyPerson in Twenty). */
+/** The people linked to this record (person in Twenty). */
 export function usePeople(contact: Contact) {
   return useQuery<Person[]>({
     queryKey: ["people", contact.type, contact.id],
