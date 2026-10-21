@@ -1,15 +1,27 @@
 import type { AdminAction, AdminActivity, AdminObject } from "../types.js";
+import { OBJECTS, singularName } from "../../../lib/wholesale/objects.js";
 
-/** Twenty timelineActivity target column -> dialer object. Other workspace objects are ignored. */
+/** The timelineActivity target column Twenty creates for an object ("landOpportunities" -> "targetLandOpportunityId"). */
+export function targetColumnFor(objectName: string): string {
+  const singular = singularName(objectName);
+  return `target${singular[0].toUpperCase()}${singular.slice(1)}Id`;
+}
+
+/**
+ * Twenty timelineActivity target column -> dialer object. Other workspace
+ * objects are ignored. The contact columns follow OBJECTS: a prospect is a
+ * landOpportunity here, so its history lives under targetLandOpportunityId,
+ * not the agency column the dialer used to write.
+ */
 export const TARGET_OBJECTS: Record<string, AdminObject> = {
-  targetAgencyCallId: "call",
-  targetAgencyProspectId: "prospect",
-  targetAgencyLeadId: "lead",
-  targetAgencyPhoneId: "phone",
-  targetCallCampaignId: "callCampaign",
-  targetAgencyMessageId: "message",
-  targetAgencyCampaignId: "campaign",
-  targetAgencyScriptId: "script",
+  [targetColumnFor(OBJECTS.calls)]: "call",
+  [targetColumnFor(OBJECTS.prospects)]: "prospect",
+  [targetColumnFor(OBJECTS.leads)]: "lead",
+  [targetColumnFor(OBJECTS.phones)]: "phone",
+  [targetColumnFor(OBJECTS.callCampaigns)]: "callCampaign",
+  [targetColumnFor(OBJECTS.messages)]: "message",
+  [targetColumnFor(OBJECTS.campaigns)]: "campaign",
+  [targetColumnFor(OBJECTS.scripts)]: "script",
 };
 
 /** REST filter keeping only events on dialer objects. */

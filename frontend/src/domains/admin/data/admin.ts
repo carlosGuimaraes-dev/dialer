@@ -21,6 +21,7 @@ import {
   type IconComponent,
 } from "@/domains/ui/icons";
 import type { Bucket, DateRange } from "@/domains/reports/data";
+import { CONTACT_OBJECTS } from "@/domains/twenty/objects";
 import { useContactFacets, useProspectLookup } from "@/domains/contact/list";
 
 /* Mirrors backend/src/routes/admin/types.ts */
@@ -45,16 +46,19 @@ export interface AdminActivityResponse {
   truncated: boolean;
 }
 
-/** `twenty` / `twentySingular`: the object names in Twenty, used for deep links. */
+/**
+ * `twenty` / `twentySingular`: the object names in Twenty, used for deep links.
+ * They follow CONTACT_OBJECTS, the same names the backend reads and writes.
+ */
 export const OBJECTS: Record<AdminObject, { label: string; singular: string; icon: IconComponent; twenty: string; twentySingular: string }> = {
-  call: { label: "Calls", singular: "Call", icon: Phone, twenty: "agencyCalls", twentySingular: "agencyCall" },
-  prospect: { label: "Prospects", singular: "Prospect", icon: Users, twenty: "agencyProspects", twentySingular: "agencyProspect" },
-  lead: { label: "Leads", singular: "Lead", icon: User, twenty: "agencyLeads", twentySingular: "agencyLead" },
-  phone: { label: "Phone numbers", singular: "Phone number", icon: Headphones, twenty: "agencyPhones", twentySingular: "agencyPhone" },
-  callCampaign: { label: "Call campaigns", singular: "Call campaign", icon: PhoneCall, twenty: "callCampaigns", twentySingular: "callCampaign" },
-  campaign: { label: "Campaigns", singular: "Campaign", icon: BarChart3, twenty: "agencyCampaigns", twentySingular: "agencyCampaign" },
-  script: { label: "Scripts", singular: "Script", icon: BookOpen, twenty: "agencyScripts", twentySingular: "agencyScript" },
-  message: { label: "Texts", singular: "Text", icon: MessageSquare, twenty: "agencyMessages", twentySingular: "agencyMessage" },
+  call: { label: "Calls", singular: "Call", icon: Phone, twenty: CONTACT_OBJECTS.calls, twentySingular: "agencyCall" },
+  prospect: { label: "Sellers", singular: "Seller", icon: Users, twenty: CONTACT_OBJECTS.prospects, twentySingular: "landOpportunity" },
+  lead: { label: "Buyers", singular: "Buyer", icon: User, twenty: CONTACT_OBJECTS.leads, twentySingular: "buyer" },
+  phone: { label: "Phone numbers", singular: "Phone number", icon: Headphones, twenty: CONTACT_OBJECTS.phones, twentySingular: "agencyPhone" },
+  callCampaign: { label: "Call campaigns", singular: "Call campaign", icon: PhoneCall, twenty: CONTACT_OBJECTS.callCampaigns, twentySingular: "callCampaign" },
+  campaign: { label: "Campaigns", singular: "Campaign", icon: BarChart3, twenty: CONTACT_OBJECTS.campaigns, twentySingular: "agencyCampaign" },
+  script: { label: "Scripts", singular: "Script", icon: BookOpen, twenty: CONTACT_OBJECTS.scripts, twentySingular: "agencyScript" },
+  message: { label: "Texts", singular: "Text", icon: MessageSquare, twenty: CONTACT_OBJECTS.messages, twentySingular: "agencyMessage" },
 };
 
 export const ACTIONS: Record<AdminAction, { label: string; color: string; icon: IconComponent; className: string; iconClassName: string }> = {

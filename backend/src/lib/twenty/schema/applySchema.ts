@@ -92,6 +92,8 @@ function driftNote(want: { type: string; options?: Array<{ value: string }> }, l
 function fieldInput(objectMetadataId: string, f: SchemaField): Record<string, unknown> {
   const isNullable = f.isNullable ?? true;
   const defaultValue = f.defaultValue ?? (!isNullable && f.type === "TEXT" ? "''" : undefined);
+  // CURRENCY is the one type that needs settings to be creatable at all.
+  const settings = f.settings ?? (f.type === "CURRENCY" ? { precision: 2 } : undefined);
   return {
     objectMetadataId,
     type: f.type,
@@ -102,7 +104,7 @@ function fieldInput(objectMetadataId: string, f: SchemaField): Record<string, un
     isNullable,
     isLabelSyncedWithName: false,
     ...(defaultValue !== undefined ? { defaultValue } : {}),
-    ...(f.settings ? { settings: f.settings } : {}),
+    ...(settings ? { settings } : {}),
     ...(f.options ? { options: f.options.map((o, position) => ({ ...o, position })) } : {}),
   };
 }

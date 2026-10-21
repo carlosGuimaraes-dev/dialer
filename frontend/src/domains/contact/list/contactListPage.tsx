@@ -12,6 +12,7 @@ import { LeadForm } from "@/domains/contact/leadForm";
 import { useToast } from "@/domains/ui/toast";
 import { ActionsMenu } from "@/domains/ui/menu";
 import { TwentyFieldLink } from "@/domains/twenty/fieldLink";
+import { CONTACT_OBJECTS } from "@/domains/twenty/objects";
 import { Chip } from "@/domains/ui/chip";
 import { DataTable, ToolbarButton, useDataTable, type DataColumn } from "@/domains/ui/table";
 import type { HeaderFilterOption } from "@/domains/ui/table";
@@ -41,16 +42,17 @@ import {
 const ALL = "all";
 const BLANK = "__blank";
 
-/** Table column key -> ACTUAL Twenty agencyProspects field (null = object page). */
+/** Table column key -> ACTUAL Twenty field on the prospect object (null = object page). */
 const PROSPECT_FIELD_FOR_KEY: Record<string, string | null> = {
   name: "name",
-  company: "niche",
+  company: "parcelNumber",
   phone: "phone",
   status: "coldCallStatus",
-  assigned_to: "assignedTo",
-  state: "region",
+  // landOpportunity has no workspace-member assignee column.
+  assigned_to: null,
+  state: "state",
   city: "city",
-  industry: "niche",
+  industry: "propertyType",
 };
 
 /** Columns the server can sort by (see backend prospects/helpers/query.ts). */
@@ -105,8 +107,8 @@ export function ProspectPage() {
 
   // Status options come from Twenty CRM
   const { data: meta } = useQuery<{ fields: Record<string, Array<{ label: string; value: string; color: string }>> }>({
-    queryKey: ["twenty-meta", "agencyProspects"],
-    queryFn: async () => api.twentyMeta.fields("agencyProspects"),
+    queryKey: ["twenty-meta", CONTACT_OBJECTS.prospects],
+    queryFn: async () => api.twentyMeta.fields(CONTACT_OBJECTS.prospects),
     staleTime: Infinity,
   });
   const statusOptions = meta?.fields["coldCallStatus"] ? mapLeadProspectStatusOptions(meta.fields["coldCallStatus"]) : [];
@@ -326,7 +328,7 @@ export function ProspectPage() {
   // A person opens their company, where the People tab lists them.
   const open = (r: ContactRow) =>
     navigate(r.type === "lead" ? `/leads/${r.id}` : r.type === "person" ? (r.prospectId ? `/contacts/${r.prospectId}` : "/contacts") : `/contacts/${r.id}`);
-  const fieldLink = (key: string) => <TwentyFieldLink objectName="agencyProspects" fieldName={PROSPECT_FIELD_FOR_KEY[key] ?? null} />;
+  const fieldLink = (key: string) => <TwentyFieldLink objectName={CONTACT_OBJECTS.prospects} fieldName={PROSPECT_FIELD_FOR_KEY[key] ?? null} />;
   const statusLabel = (value?: string) => statusOptions.find((o) => o.value === value)?.label ?? value;
 
   const asHeaderOptions = (opts: StatusOption[]): HeaderFilterOption[] =>

@@ -20,8 +20,8 @@ test("mapActivity carries structured before/after", () => {
     {
       id: "e1",
       happensAt: "2026-10-10T09:00:00Z",
-      name: "agencyProspect.updated",
-      targetAgencyProspectId: "p1",
+      name: "landOpportunity.updated",
+      targetLandOpportunityId: "p1",
       createdBy: { name: "Admin User", source: "API" },
       properties: { diff: { brandColors: { before: null, after: { primary: "#0693e3" } } } },
     },

@@ -4,10 +4,11 @@ import { api } from "@/domains/api/client";
 import type { AdminActivityResponse } from "@/domains/admin/data";
 import { historyRows, type FieldOptions } from "@/domains/activity/historyFormat";
 import type { Contact } from "@/domains/contact/model";
+import { contactObjectName } from "@/domains/twenty/objects";
 
 /** The contact's change history from Twenty, as readable rows. */
 export function useRecordHistory(contact: Contact) {
-  const plural = contact.type === "lead" ? "agencyLeads" : "agencyProspects";
+  const plural = contactObjectName(contact.type);
   const activity = useQuery<AdminActivityResponse>({
     queryKey: ["record-activity", contact.type, contact.id],
     // The contact's own changes plus every call to it and text with it.

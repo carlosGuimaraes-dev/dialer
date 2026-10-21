@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/domains/api/client";
+import { CONTACT_OBJECTS } from "@/domains/twenty/objects";
 
 /*
  * Deep links into the Twenty workspace behind the dialer. Twenty's routes:
@@ -13,8 +14,8 @@ const FALLBACK_BASE_URL = "https://twenty.inferencesaver.com";
 /** The workspace address, read once from the backend's Twenty metadata route. */
 export function useTwentyBaseUrl(): string {
   const { data } = useQuery<{ baseUrl?: string }>({
-    queryKey: ["twenty-meta", "agencyProspects"],
-    queryFn: async () => api.twentyMeta.fields("agencyProspects"),
+    queryKey: ["twenty-meta", CONTACT_OBJECTS.prospects],
+    queryFn: async () => api.twentyMeta.fields(CONTACT_OBJECTS.prospects),
     staleTime: Infinity,
   });
   return (data?.baseUrl || FALLBACK_BASE_URL).replace(/\/$/, "");

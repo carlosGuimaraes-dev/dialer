@@ -4,7 +4,7 @@ import { authMiddleware } from "../../middleware/auth.js";
 import { fetchTwenty } from "../../lib/twenty/client/index.js";
 import { listWorkspaceMembers } from "../../lib/twenty/workspaceMember/index.js";
 import { createLogger } from "../../lib/logger/index.js";
-import { DIALER_TARGET_FILTER, mapActivity, recordTargetFilter } from "./helpers/index.js";
+import { DIALER_TARGET_FILTER, mapActivity, recordTargetFilter, targetColumnFor } from "./helpers/index.js";
 import type { AdminActivity, AdminActivityResponse } from "./types.js";
 
 import { OBJECTS, contactRelationId } from "../../lib/wholesale/objects.js";
@@ -48,9 +48,11 @@ async function contactTargetFilter(contact: string): Promise<string | null> {
       .then((rows) => rows.slice(0, 60).map((m) => m.id))
       .catch(() => [] as string[]),
   ]);
-  const clauses = [`${type === "lead" ? "targetAgencyLeadId" : "targetAgencyProspectId"}[eq]:"${id}"`];
-  if (calls.length) clauses.push(`targetAgencyCallId[in]:[${calls.join(",")}]`);
-  if (texts.length) clauses.push(`targetAgencyMessageId[in]:[${texts.join(",")}]`);
+  // The contact's own events: the target column follows the live object name.
+  const contactColumn = type === "lead" ? targetColumnFor(OBJECTS.leads) : targetColumnFor(OBJECTS.prospects);
+  const clauses = [`${contactColumn}[eq]:"${id}"`];
+  if (calls.length) clauses.push(`${targetColumnFor(OBJECTS.calls)}[in]:[${calls.join(",")}]`);
+  if (texts.length) clauses.push(`${targetColumnFor(OBJECTS.messages)}[in]:[${texts.join(",")}]`);
   return clauses.length > 1 ? `or(${clauses.join(",")})` : clauses[0];
 }
 

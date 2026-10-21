@@ -37,6 +37,16 @@ export function contactRelationId(key: ContactObjectKey): string {
  * wholesale relation columns. Accepts both spellings so payloads from the
  * frontend need no rewrite.
  */
+/**
+ * Singular name of an object, as Twenty builds derived column names from it
+ * (timeline target columns: targetLandOpportunityId, targetAgencyCallId).
+ */
+export function singularName(plural: string): string {
+  if (plural === "people") return "person";
+  if (/ies$/.test(plural)) return `${plural.slice(0, -3)}y`;
+  return plural.replace(/s$/, "");
+}
+
 export function contactRelationAliases(key: ContactObjectKey): string[] {
   return key === "leads" ? ["buyerId", "agencyLeadId"] : ["landOpportunityId", "agencyProspectId"];
 }
