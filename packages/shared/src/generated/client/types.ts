@@ -1204,6 +1204,9 @@ const __typeMapSource: any = {
             "coldCallStatus": [
                 79
             ],
+            "notes": [
+                1
+            ],
             "timelineActivities": [
                 323,
                 {
@@ -1369,6 +1372,60 @@ const __typeMapSource: any = {
                     "orderBy": [
                         146,
                         "[BuilderMatchOrderByInput]"
+                    ]
+                }
+            ],
+            "calls": [
+                875,
+                {
+                    "first": [
+                        83
+                    ],
+                    "last": [
+                        83
+                    ],
+                    "offset": [
+                        83
+                    ],
+                    "before": [
+                        1
+                    ],
+                    "after": [
+                        1
+                    ],
+                    "filter": [
+                        882
+                    ],
+                    "orderBy": [
+                        889,
+                        "[AgencyCallOrderByInput]"
+                    ]
+                }
+            ],
+            "conversations": [
+                953,
+                {
+                    "first": [
+                        83
+                    ],
+                    "last": [
+                        83
+                    ],
+                    "offset": [
+                        83
+                    ],
+                    "before": [
+                        1
+                    ],
+                    "after": [
+                        1
+                    ],
+                    "filter": [
+                        960
+                    ],
+                    "orderBy": [
+                        961,
+                        "[AgencyConversationOrderByInput]"
                     ]
                 }
             ],
@@ -2156,6 +2213,21 @@ const __typeMapSource: any = {
                 81
             ],
             "percentageNotEmptyColdCallStatus": [
+                81
+            ],
+            "countUniqueValuesNotes": [
+                83
+            ],
+            "countEmptyNotes": [
+                83
+            ],
+            "countNotEmptyNotes": [
+                83
+            ],
+            "percentageEmptyNotes": [
+                81
+            ],
+            "percentageNotEmptyNotes": [
                 81
             ],
             "edges": [
@@ -2949,6 +3021,21 @@ const __typeMapSource: any = {
             "percentageNotEmptyColdCallStatus": [
                 81
             ],
+            "countUniqueValuesNotes": [
+                83
+            ],
+            "countEmptyNotes": [
+                83
+            ],
+            "countNotEmptyNotes": [
+                83
+            ],
+            "percentageEmptyNotes": [
+                81
+            ],
+            "percentageNotEmptyNotes": [
+                81
+            ],
             "edges": [
                 88
             ],
@@ -3135,6 +3222,9 @@ const __typeMapSource: any = {
             "coldCallStatus": [
                 79
             ],
+            "notes": [
+                1
+            ],
             "__typename": [
                 1
             ]
@@ -3281,6 +3371,9 @@ const __typeMapSource: any = {
             "coldCallStatus": [
                 79
             ],
+            "notes": [
+                1
+            ],
             "__typename": [
                 1
             ]
@@ -3426,6 +3519,9 @@ const __typeMapSource: any = {
             ],
             "coldCallStatus": [
                 115
+            ],
+            "notes": [
+                7
             ],
             "and": [
                 100
@@ -4038,6 +4134,9 @@ const __typeMapSource: any = {
             "coldCallStatus": [
                 11
             ],
+            "notes": [
+                11
+            ],
             "__typename": [
                 1
             ]
@@ -4185,6 +4284,9 @@ const __typeMapSource: any = {
                 11
             ],
             "coldCallStatus": [
+                11
+            ],
+            "notes": [
                 11
             ],
             "__typename": [
@@ -4966,6 +5068,21 @@ const __typeMapSource: any = {
             "percentageNotEmptyColdCallStatus": [
                 11
             ],
+            "countUniqueValuesNotes": [
+                11
+            ],
+            "countEmptyNotes": [
+                11
+            ],
+            "countNotEmptyNotes": [
+                11
+            ],
+            "percentageEmptyNotes": [
+                11
+            ],
+            "percentageNotEmptyNotes": [
+                11
+            ],
             "__typename": [
                 1
             ]
@@ -5092,6 +5209,9 @@ const __typeMapSource: any = {
                 13
             ],
             "coldCallStatus": [
+                13
+            ],
+            "notes": [
                 13
             ],
             "__typename": [
@@ -58737,6 +58857,60 @@ const __typeMapSource: any = {
                     ]
                 }
             ],
+            "calls": [
+                875,
+                {
+                    "first": [
+                        83
+                    ],
+                    "last": [
+                        83
+                    ],
+                    "offset": [
+                        83
+                    ],
+                    "before": [
+                        1
+                    ],
+                    "after": [
+                        1
+                    ],
+                    "filter": [
+                        882
+                    ],
+                    "orderBy": [
+                        889,
+                        "[AgencyCallOrderByInput]"
+                    ]
+                }
+            ],
+            "conversations": [
+                953,
+                {
+                    "first": [
+                        83
+                    ],
+                    "last": [
+                        83
+                    ],
+                    "offset": [
+                        83
+                    ],
+                    "before": [
+                        1
+                    ],
+                    "after": [
+                        1
+                    ],
+                    "filter": [
+                        960
+                    ],
+                    "orderBy": [
+                        961,
+                        "[AgencyConversationOrderByInput]"
+                    ]
+                }
+            ],
             "__typename": [
                 1
             ]
@@ -77549,6 +77723,12 @@ const __typeMapSource: any = {
             "agencyLeadId": [
                 82
             ],
+            "landOpportunityId": [
+                82
+            ],
+            "buyerId": [
+                82
+            ],
             "timelineActivities": [
                 323,
                 {
@@ -77692,6 +77872,12 @@ const __typeMapSource: any = {
             ],
             "agencyLead": [
                 636
+            ],
+            "landOpportunity": [
+                80
+            ],
+            "buyer": [
+                671
             ],
             "__typename": [
                 1
@@ -79231,6 +79417,18 @@ const __typeMapSource: any = {
             "agencyLead": [
                 640
             ],
+            "landOpportunityId": [
+                82
+            ],
+            "landOpportunity": [
+                95
+            ],
+            "buyerId": [
+                82
+            ],
+            "buyer": [
+                675
+            ],
             "__typename": [
                 1
             ]
@@ -79371,6 +79569,18 @@ const __typeMapSource: any = {
             "agencyLead": [
                 640
             ],
+            "landOpportunityId": [
+                82
+            ],
+            "landOpportunity": [
+                95
+            ],
+            "buyerId": [
+                82
+            ],
+            "buyer": [
+                675
+            ],
             "__typename": [
                 1
             ]
@@ -79510,6 +79720,18 @@ const __typeMapSource: any = {
             ],
             "agencyLead": [
                 645
+            ],
+            "landOpportunityId": [
+                43
+            ],
+            "landOpportunity": [
+                100
+            ],
+            "buyerId": [
+                43
+            ],
+            "buyer": [
+                680
             ],
             "and": [
                 882
@@ -79870,6 +80092,18 @@ const __typeMapSource: any = {
             "agencyLead": [
                 649
             ],
+            "landOpportunityId": [
+                11
+            ],
+            "landOpportunity": [
+                116
+            ],
+            "buyerId": [
+                11
+            ],
+            "buyer": [
+                685
+            ],
             "__typename": [
                 1
             ]
@@ -80012,6 +80246,18 @@ const __typeMapSource: any = {
             ],
             "agencyLead": [
                 650
+            ],
+            "landOpportunityId": [
+                11
+            ],
+            "landOpportunity": [
+                117
+            ],
+            "buyerId": [
+                11
+            ],
+            "buyer": [
+                686
             ],
             "__typename": [
                 1
@@ -80702,6 +80948,18 @@ const __typeMapSource: any = {
             "agencyLead": [
                 649
             ],
+            "landOpportunityId": [
+                11
+            ],
+            "landOpportunity": [
+                116
+            ],
+            "buyerId": [
+                11
+            ],
+            "buyer": [
+                685
+            ],
             "__typename": [
                 1
             ]
@@ -80820,6 +81078,12 @@ const __typeMapSource: any = {
             ],
             "agencyLead": [
                 652
+            ],
+            "landOpportunity": [
+                119
+            ],
+            "buyer": [
+                688
             ],
             "__typename": [
                 1
@@ -85125,6 +85389,12 @@ const __typeMapSource: any = {
             "agencyProspectId": [
                 82
             ],
+            "landOpportunityId": [
+                82
+            ],
+            "buyerId": [
+                82
+            ],
             "timelineActivities": [
                 323,
                 {
@@ -85268,6 +85538,12 @@ const __typeMapSource: any = {
             ],
             "agencyProspect": [
                 755
+            ],
+            "landOpportunity": [
+                80
+            ],
+            "buyer": [
+                671
             ],
             "__typename": [
                 1
@@ -86096,6 +86372,18 @@ const __typeMapSource: any = {
             "agencyProspect": [
                 759
             ],
+            "landOpportunityId": [
+                82
+            ],
+            "landOpportunity": [
+                95
+            ],
+            "buyerId": [
+                82
+            ],
+            "buyer": [
+                675
+            ],
             "__typename": [
                 1
             ]
@@ -86179,6 +86467,18 @@ const __typeMapSource: any = {
             "agencyProspect": [
                 759
             ],
+            "landOpportunityId": [
+                82
+            ],
+            "landOpportunity": [
+                95
+            ],
+            "buyerId": [
+                82
+            ],
+            "buyer": [
+                675
+            ],
             "__typename": [
                 1
             ]
@@ -86261,6 +86561,18 @@ const __typeMapSource: any = {
             ],
             "agencyProspect": [
                 764
+            ],
+            "landOpportunityId": [
+                43
+            ],
+            "landOpportunity": [
+                100
+            ],
+            "buyerId": [
+                43
+            ],
+            "buyer": [
+                680
             ],
             "and": [
                 960
@@ -86354,6 +86666,18 @@ const __typeMapSource: any = {
             "agencyProspect": [
                 775
             ],
+            "landOpportunityId": [
+                11
+            ],
+            "landOpportunity": [
+                116
+            ],
+            "buyerId": [
+                11
+            ],
+            "buyer": [
+                685
+            ],
             "__typename": [
                 1
             ]
@@ -86439,6 +86763,18 @@ const __typeMapSource: any = {
             ],
             "agencyProspect": [
                 776
+            ],
+            "landOpportunityId": [
+                11
+            ],
+            "landOpportunity": [
+                117
+            ],
+            "buyerId": [
+                11
+            ],
+            "buyer": [
+                686
             ],
             "__typename": [
                 1
@@ -86802,6 +87138,18 @@ const __typeMapSource: any = {
             "agencyProspect": [
                 775
             ],
+            "landOpportunityId": [
+                11
+            ],
+            "landOpportunity": [
+                116
+            ],
+            "buyerId": [
+                11
+            ],
+            "buyer": [
+                685
+            ],
             "__typename": [
                 1
             ]
@@ -86863,6 +87211,12 @@ const __typeMapSource: any = {
             ],
             "agencyProspect": [
                 778
+            ],
+            "landOpportunity": [
+                119
+            ],
+            "buyer": [
+                688
             ],
             "__typename": [
                 1

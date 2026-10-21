@@ -66,9 +66,9 @@ export interface Address {
 export type ActorSourceEnum = 'EMAIL' | 'CALENDAR' | 'WORKFLOW' | 'AGENT' | 'API' | 'IMPORT' | 'MANUAL' | 'SYSTEM' | 'WEBHOOK' | 'APPLICATION'
 
 export interface Actor {
-    source?: ActorSourceEnum
+    source: ActorSourceEnum
     workspaceMemberId?: Scalars['UUID']
-    name?: Scalars['String']
+    name: Scalars['String']
     context?: ActorContext
     __typename: 'Actor'
 }
@@ -246,6 +246,8 @@ export interface LandOpportunity {
     email?: Scalars['String']
     /** Dialer contact pipeline state (mirrors opportunityStatus vocabulary) */
     coldCallStatus?: LandOpportunityColdCallStatusEnum
+    /** Free-text contact notes written by the dialer dock and the contact page */
+    notes?: Scalars['String']
     /** LandOpportunities tied to the Timeline Activity */
     timelineActivities?: TimelineActivityConnection
     /** LandOpportunities tied to the Attachment */
@@ -262,6 +264,8 @@ export interface LandOpportunity {
     ownerContact?: Person
     /** Land parcel being matched. */
     builderMatches?: BuilderMatchConnection
+    calls?: AgencyCallConnection
+    conversations?: AgencyConversationConnection
     __typename: 'LandOpportunity'
 }
 
@@ -784,6 +788,16 @@ export interface LandOpportunityConnection {
     percentageEmptyColdCallStatus?: Scalars['Float']
     /** Percentage of non-empty values for coldCallStatus */
     percentageNotEmptyColdCallStatus?: Scalars['Float']
+    /** Number of unique values for notes */
+    countUniqueValuesNotes?: Scalars['Int']
+    /** Number of empty values for notes */
+    countEmptyNotes?: Scalars['Int']
+    /** Number of non-empty values for notes */
+    countNotEmptyNotes?: Scalars['Int']
+    /** Percentage of empty values for notes */
+    percentageEmptyNotes?: Scalars['Float']
+    /** Percentage of non-empty values for notes */
+    percentageNotEmptyNotes?: Scalars['Float']
     edges: LandOpportunityEdge[]
     pageInfo: PageInfo
     __typename: 'LandOpportunityConnection'
@@ -1308,6 +1322,16 @@ export interface LandOpportunityGroupByConnection {
     percentageEmptyColdCallStatus?: Scalars['Float']
     /** Percentage of non-empty values for coldCallStatus */
     percentageNotEmptyColdCallStatus?: Scalars['Float']
+    /** Number of unique values for notes */
+    countUniqueValuesNotes?: Scalars['Int']
+    /** Number of empty values for notes */
+    countEmptyNotes?: Scalars['Int']
+    /** Number of non-empty values for notes */
+    countNotEmptyNotes?: Scalars['Int']
+    /** Percentage of empty values for notes */
+    percentageEmptyNotes?: Scalars['Float']
+    /** Percentage of non-empty values for notes */
+    percentageNotEmptyNotes?: Scalars['Float']
     edges: LandOpportunityEdge[]
     pageInfo: PageInfo
     groupByDimensionValues: Scalars['JSON']
@@ -18031,6 +18055,8 @@ export interface Buyer {
     pointOfContact?: Person
     /** Buyer that defined this buybox. */
     buyboxes?: BuyboxConnection
+    calls?: AgencyCallConnection
+    conversations?: AgencyConversationConnection
     __typename: 'Buyer'
 }
 
@@ -23771,6 +23797,8 @@ export interface AgencyCall {
     disposition?: AgencyCallDispositionEnum
     agencyPhoneId?: Scalars['ID']
     agencyLeadId?: Scalars['ID']
+    landOpportunityId?: Scalars['ID']
+    buyerId?: Scalars['ID']
     /** AgencyCalls tied to the Timeline Activity */
     timelineActivities?: TimelineActivityConnection
     /** AgencyCalls tied to the Attachment */
@@ -23784,6 +23812,8 @@ export interface AgencyCall {
     agencyProspect?: AgencyProspect
     agencyPhone?: AgencyPhone
     agencyLead?: AgencyLead
+    landOpportunity?: LandOpportunity
+    buyer?: Buyer
     __typename: 'AgencyCall'
 }
 
@@ -25943,6 +25973,8 @@ export interface AgencyConversation {
     latestPreview?: Scalars['String']
     agencyLeadId?: Scalars['ID']
     agencyProspectId?: Scalars['ID']
+    landOpportunityId?: Scalars['ID']
+    buyerId?: Scalars['ID']
     /** AgencyConversations tied to the Timeline Activity */
     timelineActivities?: TimelineActivityConnection
     /** AgencyConversations tied to the Attachment */
@@ -25956,6 +25988,8 @@ export interface AgencyConversation {
     agencyPhone?: AgencyPhone
     agencyLead?: AgencyLead
     agencyProspect?: AgencyProspect
+    landOpportunity?: LandOpportunity
+    buyer?: Buyer
     __typename: 'AgencyConversation'
 }
 
@@ -29859,7 +29893,7 @@ export interface ActorContextGenqlSelection{
     __scalar?: boolean | number
 }
 
-export interface ActorCreateInput {source?: (ActorSourceEnum | null),context?: (ActorContextInput | null)}
+export interface ActorCreateInput {source: ActorSourceEnum,context?: (ActorContextInput | null)}
 
 export interface ActorContextInput {provider?: (Scalars['String'] | null)}
 
@@ -30040,6 +30074,8 @@ export interface LandOpportunityGenqlSelection{
     email?: boolean | number
     /** Dialer contact pipeline state (mirrors opportunityStatus vocabulary) */
     coldCallStatus?: boolean | number
+    /** Free-text contact notes written by the dialer dock and the contact page */
+    notes?: boolean | number
     /** LandOpportunities tied to the Timeline Activity */
     timelineActivities?: (TimelineActivityConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (TimelineActivityFilterInput | null), orderBy?: ((TimelineActivityOrderByInput | null)[] | null)} })
     /** LandOpportunities tied to the Attachment */
@@ -30056,6 +30092,8 @@ export interface LandOpportunityGenqlSelection{
     ownerContact?: PersonGenqlSelection
     /** Land parcel being matched. */
     builderMatches?: (BuilderMatchConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (BuilderMatchFilterInput | null), orderBy?: ((BuilderMatchOrderByInput | null)[] | null)} })
+    calls?: (AgencyCallConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (AgencyCallFilterInput | null), orderBy?: ((AgencyCallOrderByInput | null)[] | null)} })
+    conversations?: (AgencyConversationConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (AgencyConversationFilterInput | null), orderBy?: ((AgencyConversationOrderByInput | null)[] | null)} })
     __typename?: boolean | number
     __scalar?: boolean | number
 }
@@ -30580,6 +30618,16 @@ export interface LandOpportunityConnectionGenqlSelection{
     percentageEmptyColdCallStatus?: boolean | number
     /** Percentage of non-empty values for coldCallStatus */
     percentageNotEmptyColdCallStatus?: boolean | number
+    /** Number of unique values for notes */
+    countUniqueValuesNotes?: boolean | number
+    /** Number of empty values for notes */
+    countEmptyNotes?: boolean | number
+    /** Number of non-empty values for notes */
+    countNotEmptyNotes?: boolean | number
+    /** Percentage of empty values for notes */
+    percentageEmptyNotes?: boolean | number
+    /** Percentage of non-empty values for notes */
+    percentageNotEmptyNotes?: boolean | number
     edges?: LandOpportunityEdgeGenqlSelection
     pageInfo?: PageInfoGenqlSelection
     __typename?: boolean | number
@@ -31106,6 +31154,16 @@ export interface LandOpportunityGroupByConnectionGenqlSelection{
     percentageEmptyColdCallStatus?: boolean | number
     /** Percentage of non-empty values for coldCallStatus */
     percentageNotEmptyColdCallStatus?: boolean | number
+    /** Number of unique values for notes */
+    countUniqueValuesNotes?: boolean | number
+    /** Number of empty values for notes */
+    countEmptyNotes?: boolean | number
+    /** Number of non-empty values for notes */
+    countNotEmptyNotes?: boolean | number
+    /** Percentage of empty values for notes */
+    percentageEmptyNotes?: boolean | number
+    /** Percentage of non-empty values for notes */
+    percentageNotEmptyNotes?: boolean | number
     edges?: LandOpportunityEdgeGenqlSelection
     pageInfo?: PageInfoGenqlSelection
     groupByDimensionValues?: boolean | number
@@ -31223,7 +31281,9 @@ lastCallAt?: (Scalars['DateTime'] | null),
 /** Seller/owner callback number (E.164) */
 phone?: (Scalars['String'] | null),email?: (Scalars['String'] | null),
 /** Dialer contact pipeline state (mirrors opportunityStatus vocabulary) */
-coldCallStatus?: (LandOpportunityColdCallStatusEnum | null)}
+coldCallStatus?: (LandOpportunityColdCallStatusEnum | null),
+/** Free-text contact notes written by the dialer dock and the contact page */
+notes?: (Scalars['String'] | null)}
 
 
 /** A land parcel being researched, presented to builders, or acquired. Property status is tracked separately from the commercial pipeline. */
@@ -31319,7 +31379,9 @@ lastCallAt?: (Scalars['DateTime'] | null),
 /** Seller/owner callback number (E.164) */
 phone?: (Scalars['String'] | null),email?: (Scalars['String'] | null),
 /** Dialer contact pipeline state (mirrors opportunityStatus vocabulary) */
-coldCallStatus?: (LandOpportunityColdCallStatusEnum | null)}
+coldCallStatus?: (LandOpportunityColdCallStatusEnum | null),
+/** Free-text contact notes written by the dialer dock and the contact page */
+notes?: (Scalars['String'] | null)}
 
 
 /** A land parcel being researched, presented to builders, or acquired. Property status is tracked separately from the commercial pipeline. */
@@ -31415,7 +31477,9 @@ lastCallAt?: (DateTimeFilter | null),
 /** Seller/owner callback number (E.164) */
 phone?: (StringFilter | null),email?: (StringFilter | null),
 /** Dialer contact pipeline state (mirrors opportunityStatus vocabulary) */
-coldCallStatus?: (LandOpportunityColdCallStatusEnumFilter | null),and?: ((LandOpportunityFilterInput | null)[] | null),or?: ((LandOpportunityFilterInput | null)[] | null),not?: (LandOpportunityFilterInput | null)}
+coldCallStatus?: (LandOpportunityColdCallStatusEnumFilter | null),
+/** Free-text contact notes written by the dialer dock and the contact page */
+notes?: (StringFilter | null),and?: ((LandOpportunityFilterInput | null)[] | null),or?: ((LandOpportunityFilterInput | null)[] | null),not?: (LandOpportunityFilterInput | null)}
 
 export interface DateTimeFilter {eq?: (Scalars['DateTime'] | null),gt?: (Scalars['DateTime'] | null),gte?: (Scalars['DateTime'] | null),in?: (Scalars['DateTime'][] | null),lt?: (Scalars['DateTime'] | null),lte?: (Scalars['DateTime'] | null),neq?: (Scalars['DateTime'] | null),is?: (FilterIs | null)}
 
@@ -31541,7 +31605,9 @@ lastCallAt?: (OrderByDirection | null),
 /** Seller/owner callback number (E.164) */
 phone?: (OrderByDirection | null),email?: (OrderByDirection | null),
 /** Dialer contact pipeline state (mirrors opportunityStatus vocabulary) */
-coldCallStatus?: (OrderByDirection | null)}
+coldCallStatus?: (OrderByDirection | null),
+/** Free-text contact notes written by the dialer dock and the contact page */
+notes?: (OrderByDirection | null)}
 
 
 /** A land parcel being researched, presented to builders, or acquired. Property status is tracked separately from the commercial pipeline. */
@@ -31639,7 +31705,9 @@ lastCallAt?: (OrderByDateGranularityInput | null),
 /** Seller/owner callback number (E.164) */
 phone?: (OrderByDirection | null),email?: (OrderByDirection | null),
 /** Dialer contact pipeline state (mirrors opportunityStatus vocabulary) */
-coldCallStatus?: (OrderByDirection | null)}
+coldCallStatus?: (OrderByDirection | null),
+/** Free-text contact notes written by the dialer dock and the contact page */
+notes?: (OrderByDirection | null)}
 
 
 /** Aggregate-based ordering */
@@ -32159,7 +32227,17 @@ countNotEmptyColdCallStatus?: (OrderByDirection | null),
 /** Percentage of empty values for coldCallStatus */
 percentageEmptyColdCallStatus?: (OrderByDirection | null),
 /** Percentage of non-empty values for coldCallStatus */
-percentageNotEmptyColdCallStatus?: (OrderByDirection | null)}
+percentageNotEmptyColdCallStatus?: (OrderByDirection | null),
+/** Number of unique values for notes */
+countUniqueValuesNotes?: (OrderByDirection | null),
+/** Number of empty values for notes */
+countEmptyNotes?: (OrderByDirection | null),
+/** Number of non-empty values for notes */
+countNotEmptyNotes?: (OrderByDirection | null),
+/** Percentage of empty values for notes */
+percentageEmptyNotes?: (OrderByDirection | null),
+/** Percentage of non-empty values for notes */
+percentageNotEmptyNotes?: (OrderByDirection | null)}
 
 
 /** A land parcel being researched, presented to builders, or acquired. Property status is tracked separately from the commercial pipeline. */
@@ -32243,7 +32321,9 @@ lastCallAt?: (GroupByDateGranularityInput | null),
 /** Seller/owner callback number (E.164) */
 phone?: (Scalars['Boolean'] | null),email?: (Scalars['Boolean'] | null),
 /** Dialer contact pipeline state (mirrors opportunityStatus vocabulary) */
-coldCallStatus?: (Scalars['Boolean'] | null)}
+coldCallStatus?: (Scalars['Boolean'] | null),
+/** Free-text contact notes written by the dialer dock and the contact page */
+notes?: (Scalars['Boolean'] | null)}
 
 
 /** Campaign delivery */
@@ -65501,6 +65581,8 @@ export interface BuyerGenqlSelection{
     pointOfContact?: PersonGenqlSelection
     /** Buyer that defined this buybox. */
     buyboxes?: (BuyboxConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (BuyboxFilterInput | null), orderBy?: ((BuyboxOrderByInput | null)[] | null)} })
+    calls?: (AgencyCallConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (AgencyCallFilterInput | null), orderBy?: ((AgencyCallOrderByInput | null)[] | null)} })
+    conversations?: (AgencyConversationConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (AgencyConversationFilterInput | null), orderBy?: ((AgencyConversationOrderByInput | null)[] | null)} })
     __typename?: boolean | number
     __scalar?: boolean | number
 }
@@ -76799,6 +76881,8 @@ export interface AgencyCallGenqlSelection{
     disposition?: boolean | number
     agencyPhoneId?: boolean | number
     agencyLeadId?: boolean | number
+    landOpportunityId?: boolean | number
+    buyerId?: boolean | number
     /** AgencyCalls tied to the Timeline Activity */
     timelineActivities?: (TimelineActivityConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (TimelineActivityFilterInput | null), orderBy?: ((TimelineActivityOrderByInput | null)[] | null)} })
     /** AgencyCalls tied to the Attachment */
@@ -76812,6 +76896,8 @@ export interface AgencyCallGenqlSelection{
     agencyProspect?: AgencyProspectGenqlSelection
     agencyPhone?: AgencyPhoneGenqlSelection
     agencyLead?: AgencyLeadGenqlSelection
+    landOpportunity?: LandOpportunityGenqlSelection
+    buyer?: BuyerGenqlSelection
     __typename?: boolean | number
     __scalar?: boolean | number
 }
@@ -77770,7 +77856,7 @@ updatedBy?: (ActorCreateInput | null),
 /** Search vector */
 searchVector?: (Scalars['TSVector'] | null),fromNumber?: (Scalars['String'] | null),meetingBookingId?: (Scalars['String'] | null),meetingUrl?: (Scalars['String'] | null),transcript?: (Scalars['String'] | null),agencyProspectId?: (Scalars['ID'] | null),agencyProspect?: (AgencyProspectRelationInput | null),aiModel?: (Scalars['String'] | null),aiScore?: (Scalars['Float'] | null),aiSentiment?: (Scalars['String'] | null),startedAt?: (Scalars['DateTime'] | null),aiKeyPoints?: (Scalars['String'] | null),status?: (AgencyCallStatusEnum | null),telnyxCallId?: (Scalars['String'] | null),aiConfidence?: (Scalars['Float'] | null),meetingProvider?: (AgencyCallMeetingProviderEnum | null),meetingStatus?: (AgencyCallMeetingStatusEnum | null),aiSummary?: (Scalars['String'] | null),debugLog?: (Scalars['String'] | null),durationSeconds?: (Scalars['Float'] | null),endedAt?: (Scalars['DateTime'] | null),meetingAt?: (Scalars['DateTime'] | null),notes?: (Scalars['String'] | null),recordingUrl?: (Scalars['String'] | null),telnyxRecordingId?: (Scalars['String'] | null),toNumber?: (Scalars['String'] | null),transcriptionStatus?: (AgencyCallTranscriptionStatusEnum | null),aiAnalyzedAt?: (Scalars['DateTime'] | null),createdByMemberId?: (Scalars['String'] | null),summary?: (Scalars['String'] | null),direction?: (AgencyCallDirectionEnum | null),aiScores?: (Scalars['String'] | null),
 /** The operator's call outcome (status keeps the system result) */
-disposition?: (AgencyCallDispositionEnum | null),agencyPhoneId?: (Scalars['ID'] | null),agencyPhone?: (AgencyPhoneRelationInput | null),agencyLeadId?: (Scalars['ID'] | null),agencyLead?: (AgencyLeadRelationInput | null)}
+disposition?: (AgencyCallDispositionEnum | null),agencyPhoneId?: (Scalars['ID'] | null),agencyPhone?: (AgencyPhoneRelationInput | null),agencyLeadId?: (Scalars['ID'] | null),agencyLead?: (AgencyLeadRelationInput | null),landOpportunityId?: (Scalars['ID'] | null),landOpportunity?: (LandOpportunityRelationInput | null),buyerId?: (Scalars['ID'] | null),buyer?: (BuyerRelationInput | null)}
 
 
 /** Outbound/inbound dialer calls: recording, transcript, relations to phone/prospect/lead, future meeting link. */
@@ -77794,7 +77880,7 @@ updatedBy?: (ActorUpdateInput | null),
 /** Search vector */
 searchVector?: (Scalars['TSVector'] | null),fromNumber?: (Scalars['String'] | null),meetingBookingId?: (Scalars['String'] | null),meetingUrl?: (Scalars['String'] | null),transcript?: (Scalars['String'] | null),agencyProspectId?: (Scalars['ID'] | null),agencyProspect?: (AgencyProspectRelationInput | null),aiModel?: (Scalars['String'] | null),aiScore?: (Scalars['Float'] | null),aiSentiment?: (Scalars['String'] | null),startedAt?: (Scalars['DateTime'] | null),aiKeyPoints?: (Scalars['String'] | null),status?: (AgencyCallStatusEnum | null),telnyxCallId?: (Scalars['String'] | null),aiConfidence?: (Scalars['Float'] | null),meetingProvider?: (AgencyCallMeetingProviderEnum | null),meetingStatus?: (AgencyCallMeetingStatusEnum | null),aiSummary?: (Scalars['String'] | null),debugLog?: (Scalars['String'] | null),durationSeconds?: (Scalars['Float'] | null),endedAt?: (Scalars['DateTime'] | null),meetingAt?: (Scalars['DateTime'] | null),notes?: (Scalars['String'] | null),recordingUrl?: (Scalars['String'] | null),telnyxRecordingId?: (Scalars['String'] | null),toNumber?: (Scalars['String'] | null),transcriptionStatus?: (AgencyCallTranscriptionStatusEnum | null),aiAnalyzedAt?: (Scalars['DateTime'] | null),createdByMemberId?: (Scalars['String'] | null),summary?: (Scalars['String'] | null),direction?: (AgencyCallDirectionEnum | null),aiScores?: (Scalars['String'] | null),
 /** The operator's call outcome (status keeps the system result) */
-disposition?: (AgencyCallDispositionEnum | null),agencyPhoneId?: (Scalars['ID'] | null),agencyPhone?: (AgencyPhoneRelationInput | null),agencyLeadId?: (Scalars['ID'] | null),agencyLead?: (AgencyLeadRelationInput | null)}
+disposition?: (AgencyCallDispositionEnum | null),agencyPhoneId?: (Scalars['ID'] | null),agencyPhone?: (AgencyPhoneRelationInput | null),agencyLeadId?: (Scalars['ID'] | null),agencyLead?: (AgencyLeadRelationInput | null),landOpportunityId?: (Scalars['ID'] | null),landOpportunity?: (LandOpportunityRelationInput | null),buyerId?: (Scalars['ID'] | null),buyer?: (BuyerRelationInput | null)}
 
 
 /** Outbound/inbound dialer calls: recording, transcript, relations to phone/prospect/lead, future meeting link. */
@@ -77824,7 +77910,11 @@ disposition?: (AgencyCallDispositionEnumFilter | null),agencyPhoneId?: (UUIDFilt
 /** Filter on fields of the related agencyPhone */
 agencyPhone?: (AgencyPhoneFilterInput | null),agencyLeadId?: (UUIDFilter | null),
 /** Filter on fields of the related agencyLead */
-agencyLead?: (AgencyLeadFilterInput | null),and?: ((AgencyCallFilterInput | null)[] | null),or?: ((AgencyCallFilterInput | null)[] | null),not?: (AgencyCallFilterInput | null)}
+agencyLead?: (AgencyLeadFilterInput | null),landOpportunityId?: (UUIDFilter | null),
+/** Filter on fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityFilterInput | null),buyerId?: (UUIDFilter | null),
+/** Filter on fields of the related buyer */
+buyer?: (BuyerFilterInput | null),and?: ((AgencyCallFilterInput | null)[] | null),or?: ((AgencyCallFilterInput | null)[] | null),not?: (AgencyCallFilterInput | null)}
 
 export interface AgencyCallStatusEnumFilter {eq?: (AgencyCallStatusEnum | null),neq?: (AgencyCallStatusEnum | null),in?: ((AgencyCallStatusEnum | null)[] | null),containsAny?: ((AgencyCallStatusEnum | null)[] | null),is?: (FilterIs | null),isEmptyArray?: (Scalars['Boolean'] | null),gt?: (AgencyCallStatusEnum | null),gte?: (AgencyCallStatusEnum | null),lt?: (AgencyCallStatusEnum | null),lte?: (AgencyCallStatusEnum | null)}
 
@@ -77866,7 +77956,11 @@ disposition?: (OrderByDirection | null),agencyPhoneId?: (OrderByDirection | null
 /** Order by fields of the related agencyPhone */
 agencyPhone?: (AgencyPhoneOrderByInput | null),agencyLeadId?: (OrderByDirection | null),
 /** Order by fields of the related agencyLead */
-agencyLead?: (AgencyLeadOrderByInput | null)}
+agencyLead?: (AgencyLeadOrderByInput | null),landOpportunityId?: (OrderByDirection | null),
+/** Order by fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityOrderByInput | null),buyerId?: (OrderByDirection | null),
+/** Order by fields of the related buyer */
+buyer?: (BuyerOrderByInput | null)}
 
 
 /** Outbound/inbound dialer calls: recording, transcript, relations to phone/prospect/lead, future meeting link. */
@@ -77898,7 +77992,11 @@ disposition?: (OrderByDirection | null),agencyPhoneId?: (OrderByDirection | null
 /** Order by fields of the related agencyPhone */
 agencyPhone?: (AgencyPhoneOrderByWithGroupByInput | null),agencyLeadId?: (OrderByDirection | null),
 /** Order by fields of the related agencyLead */
-agencyLead?: (AgencyLeadOrderByWithGroupByInput | null)}
+agencyLead?: (AgencyLeadOrderByWithGroupByInput | null),landOpportunityId?: (OrderByDirection | null),
+/** Order by fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityOrderByWithGroupByInput | null),buyerId?: (OrderByDirection | null),
+/** Order by fields of the related buyer */
+buyer?: (BuyerOrderByWithGroupByInput | null)}
 
 
 /** Aggregate-based ordering */
@@ -78352,7 +78450,11 @@ percentageNotEmptyDisposition?: (OrderByDirection | null),agencyPhoneId?: (Order
 /** Order by fields of the related agencyPhone */
 agencyPhone?: (AgencyPhoneOrderByInput | null),agencyLeadId?: (OrderByDirection | null),
 /** Order by fields of the related agencyLead */
-agencyLead?: (AgencyLeadOrderByInput | null)}
+agencyLead?: (AgencyLeadOrderByInput | null),landOpportunityId?: (OrderByDirection | null),
+/** Order by fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityOrderByInput | null),buyerId?: (OrderByDirection | null),
+/** Order by fields of the related buyer */
+buyer?: (BuyerOrderByInput | null)}
 
 
 /** Outbound/inbound dialer calls: recording, transcript, relations to phone/prospect/lead, future meeting link. */
@@ -78374,7 +78476,11 @@ disposition?: (Scalars['Boolean'] | null),
 /** Group by fields of the related agencyPhone */
 agencyPhone?: (AgencyPhoneGroupByInput | null),
 /** Group by fields of the related agencyLead */
-agencyLead?: (AgencyLeadGroupByInput | null)}
+agencyLead?: (AgencyLeadGroupByInput | null),
+/** Group by fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityGroupByInput | null),
+/** Group by fields of the related buyer */
+buyer?: (BuyerGroupByInput | null)}
 
 
 /** Call scripts for campaigns */
@@ -80729,6 +80835,8 @@ export interface AgencyConversationGenqlSelection{
     latestPreview?: boolean | number
     agencyLeadId?: boolean | number
     agencyProspectId?: boolean | number
+    landOpportunityId?: boolean | number
+    buyerId?: boolean | number
     /** AgencyConversations tied to the Timeline Activity */
     timelineActivities?: (TimelineActivityConnectionGenqlSelection & { __args?: {first?: (Scalars['Int'] | null), last?: (Scalars['Int'] | null), offset?: (Scalars['Int'] | null), before?: (Scalars['String'] | null), after?: (Scalars['String'] | null), filter?: (TimelineActivityFilterInput | null), orderBy?: ((TimelineActivityOrderByInput | null)[] | null)} })
     /** AgencyConversations tied to the Attachment */
@@ -80742,6 +80850,8 @@ export interface AgencyConversationGenqlSelection{
     agencyPhone?: AgencyPhoneGenqlSelection
     agencyLead?: AgencyLeadGenqlSelection
     agencyProspect?: AgencyProspectGenqlSelection
+    landOpportunity?: LandOpportunityGenqlSelection
+    buyer?: BuyerGenqlSelection
     __typename?: boolean | number
     __scalar?: boolean | number
 }
@@ -81266,7 +81376,7 @@ searchVector?: (Scalars['TSVector'] | null),agencyPhoneId?: (Scalars['ID'] | nul
 /** Blaster/Convex thread id when the thread is mirrored there; opaque, never parsed */
 blasterConversationId?: (Scalars['String'] | null),blasterNumber?: (Scalars['String'] | null),latestMessageId?: (Scalars['String'] | null),createdByMemberId?: (Scalars['String'] | null),pairKey?: (Scalars['String'] | null),peerPhone?: (Scalars['String'] | null),latestMessageAt?: (Scalars['DateTime'] | null),
 /** Dialer-owned CRM/display state (OPEN/ACTIVE/OPTED_OUT/CLOSED). Blaster suppressions remain the opt-out source of truth; never gates sending */
-status?: (Scalars['String'] | null),latestPreview?: (Scalars['String'] | null),agencyLeadId?: (Scalars['ID'] | null),agencyLead?: (AgencyLeadRelationInput | null),agencyProspectId?: (Scalars['ID'] | null),agencyProspect?: (AgencyProspectRelationInput | null)}
+status?: (Scalars['String'] | null),latestPreview?: (Scalars['String'] | null),agencyLeadId?: (Scalars['ID'] | null),agencyLead?: (AgencyLeadRelationInput | null),agencyProspectId?: (Scalars['ID'] | null),agencyProspect?: (AgencyProspectRelationInput | null),landOpportunityId?: (Scalars['ID'] | null),landOpportunity?: (LandOpportunityRelationInput | null),buyerId?: (Scalars['ID'] | null),buyer?: (BuyerRelationInput | null)}
 
 
 /** One SMS thread per pair of numbers (ours, theirs) */
@@ -81292,7 +81402,7 @@ searchVector?: (Scalars['TSVector'] | null),agencyPhoneId?: (Scalars['ID'] | nul
 /** Blaster/Convex thread id when the thread is mirrored there; opaque, never parsed */
 blasterConversationId?: (Scalars['String'] | null),blasterNumber?: (Scalars['String'] | null),latestMessageId?: (Scalars['String'] | null),createdByMemberId?: (Scalars['String'] | null),pairKey?: (Scalars['String'] | null),peerPhone?: (Scalars['String'] | null),latestMessageAt?: (Scalars['DateTime'] | null),
 /** Dialer-owned CRM/display state (OPEN/ACTIVE/OPTED_OUT/CLOSED). Blaster suppressions remain the opt-out source of truth; never gates sending */
-status?: (Scalars['String'] | null),latestPreview?: (Scalars['String'] | null),agencyLeadId?: (Scalars['ID'] | null),agencyLead?: (AgencyLeadRelationInput | null),agencyProspectId?: (Scalars['ID'] | null),agencyProspect?: (AgencyProspectRelationInput | null)}
+status?: (Scalars['String'] | null),latestPreview?: (Scalars['String'] | null),agencyLeadId?: (Scalars['ID'] | null),agencyLead?: (AgencyLeadRelationInput | null),agencyProspectId?: (Scalars['ID'] | null),agencyProspect?: (AgencyProspectRelationInput | null),landOpportunityId?: (Scalars['ID'] | null),landOpportunity?: (LandOpportunityRelationInput | null),buyerId?: (Scalars['ID'] | null),buyer?: (BuyerRelationInput | null)}
 
 
 /** One SMS thread per pair of numbers (ours, theirs) */
@@ -81324,7 +81434,11 @@ status?: (StringFilter | null),latestPreview?: (StringFilter | null),agencyLeadI
 /** Filter on fields of the related agencyLead */
 agencyLead?: (AgencyLeadFilterInput | null),agencyProspectId?: (UUIDFilter | null),
 /** Filter on fields of the related agencyProspect */
-agencyProspect?: (AgencyProspectFilterInput | null),and?: ((AgencyConversationFilterInput | null)[] | null),or?: ((AgencyConversationFilterInput | null)[] | null),not?: (AgencyConversationFilterInput | null)}
+agencyProspect?: (AgencyProspectFilterInput | null),landOpportunityId?: (UUIDFilter | null),
+/** Filter on fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityFilterInput | null),buyerId?: (UUIDFilter | null),
+/** Filter on fields of the related buyer */
+buyer?: (BuyerFilterInput | null),and?: ((AgencyConversationFilterInput | null)[] | null),or?: ((AgencyConversationFilterInput | null)[] | null),not?: (AgencyConversationFilterInput | null)}
 
 
 /** One SMS thread per pair of numbers (ours, theirs) */
@@ -81356,7 +81470,11 @@ status?: (OrderByDirection | null),latestPreview?: (OrderByDirection | null),age
 /** Order by fields of the related agencyLead */
 agencyLead?: (AgencyLeadOrderByInput | null),agencyProspectId?: (OrderByDirection | null),
 /** Order by fields of the related agencyProspect */
-agencyProspect?: (AgencyProspectOrderByInput | null)}
+agencyProspect?: (AgencyProspectOrderByInput | null),landOpportunityId?: (OrderByDirection | null),
+/** Order by fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityOrderByInput | null),buyerId?: (OrderByDirection | null),
+/** Order by fields of the related buyer */
+buyer?: (BuyerOrderByInput | null)}
 
 
 /** One SMS thread per pair of numbers (ours, theirs) */
@@ -81390,7 +81508,11 @@ status?: (OrderByDirection | null),latestPreview?: (OrderByDirection | null),age
 /** Order by fields of the related agencyLead */
 agencyLead?: (AgencyLeadOrderByWithGroupByInput | null),agencyProspectId?: (OrderByDirection | null),
 /** Order by fields of the related agencyProspect */
-agencyProspect?: (AgencyProspectOrderByWithGroupByInput | null)}
+agencyProspect?: (AgencyProspectOrderByWithGroupByInput | null),landOpportunityId?: (OrderByDirection | null),
+/** Order by fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityOrderByWithGroupByInput | null),buyerId?: (OrderByDirection | null),
+/** Order by fields of the related buyer */
+buyer?: (BuyerOrderByWithGroupByInput | null)}
 
 
 /** Aggregate-based ordering */
@@ -81626,7 +81748,11 @@ percentageNotEmptyLatestPreview?: (OrderByDirection | null),agencyLeadId?: (Orde
 /** Order by fields of the related agencyLead */
 agencyLead?: (AgencyLeadOrderByInput | null),agencyProspectId?: (OrderByDirection | null),
 /** Order by fields of the related agencyProspect */
-agencyProspect?: (AgencyProspectOrderByInput | null)}
+agencyProspect?: (AgencyProspectOrderByInput | null),landOpportunityId?: (OrderByDirection | null),
+/** Order by fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityOrderByInput | null),buyerId?: (OrderByDirection | null),
+/** Order by fields of the related buyer */
+buyer?: (BuyerOrderByInput | null)}
 
 
 /** One SMS thread per pair of numbers (ours, theirs) */
@@ -81650,7 +81776,11 @@ status?: (Scalars['Boolean'] | null),latestPreview?: (Scalars['Boolean'] | null)
 /** Group by fields of the related agencyLead */
 agencyLead?: (AgencyLeadGroupByInput | null),
 /** Group by fields of the related agencyProspect */
-agencyProspect?: (AgencyProspectGroupByInput | null)}
+agencyProspect?: (AgencyProspectGroupByInput | null),
+/** Group by fields of the related landOpportunity */
+landOpportunity?: (LandOpportunityGroupByInput | null),
+/** Group by fields of the related buyer */
+buyer?: (BuyerGroupByInput | null)}
 
 
 /** A recording of a meeting */
