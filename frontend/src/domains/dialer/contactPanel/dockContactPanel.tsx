@@ -9,6 +9,7 @@ import { LABEL, LINK } from "@/domains/ui/tokens";
 import { toContact, initials, type Contact } from "@/domains/contact/model";
 import { leadDetailKey } from "@/domains/contact/data";
 import { usePeople } from "@/domains/contact/people";
+import { useBuilderMatches, useBuyboxes, priceRange, lotSizeRange, areas } from "@/domains/wholesale/matches";
 import { useContactFacets } from "@/domains/contact/list";
 import { parseNotes } from "@/domains/contact/notes";
 import { useCallsForRecord } from "@/domains/calls/data";
@@ -59,6 +60,51 @@ function People({ contact }: { contact: Contact }) {
             <span className="block text-[13px] font-semibold truncate">{p.name}</span>
             <span className="block text-[12px] text-[var(--ods-text-tertiary)] truncate">{[p.jobTitle, p.role, p.phone].filter(Boolean).join(" · ") || "No details"}</span>
           </span>
+        </div>
+      ))}
+    </Block>
+  );
+}
+
+/** 82 -> "82% match". A lot with no score yet reads "Not scored". */
+function scoreLabel(score: number | null): string {
+  return score === null ? "Not scored" : `${Math.round(score)}% match`;
+}
+
+/** The builders whose buybox the lot fits: who to call once the seller says yes. */
+function BuilderMatches({ landOpportunityId }: { landOpportunityId: string }) {
+  const { data: matches } = useBuilderMatches(landOpportunityId);
+  if (!matches?.length) return null;
+  return (
+    <Block title="Builder matches" count={matches.length}>
+      {matches.map((m) => (
+        <div key={m.id} className="py-1.5 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-semibold truncate flex-1">{m.name}</span>
+            <span className="text-[12px] tabular-nums text-[var(--ods-text-secondary)] shrink-0">{scoreLabel(m.match_score)}</span>
+          </div>
+          <div className="text-[12px] text-[var(--ods-text-tertiary)] truncate">
+            {[m.buybox?.name, m.distance_miles !== null ? `${m.distance_miles} mi` : null, priceRange(null, m.max_price)].filter(Boolean).join(" · ")}
+          </div>
+        </div>
+      ))}
+    </Block>
+  );
+}
+
+/** What this builder will buy: the buyboxes a lot has to fit. */
+function Buyboxes({ buyerId }: { buyerId: string }) {
+  const { data: boxes } = useBuyboxes(buyerId);
+  if (!boxes?.length) return null;
+  return (
+    <Block title="Buyboxes" count={boxes.length}>
+      {boxes.map((b) => (
+        <div key={b.id} className="py-1.5 min-w-0">
+          <div className="text-[13px] font-semibold truncate">{b.name}</div>
+          <div className="text-[12px] text-[var(--ods-text-tertiary)] truncate">
+            {[priceRange(b.min_price, b.max_price), lotSizeRange(b.min_lot_size_sq_ft, b.max_lot_size_sq_ft)].filter(Boolean).join(" · ")}
+          </div>
+          {areas(b) && <div className="text-[12px] text-[var(--ods-text-tertiary)] truncate">{areas(b)}</div>}
         </div>
       ))}
     </Block>
@@ -177,6 +223,7 @@ export function DockContactPanel({ contactType, contactId, onClose }: { contactT
           </div>
 
           <People contact={contact} />
+          {contactType === "lead" ? <Buyboxes buyerId={contactId} /> : <BuilderMatches landOpportunityId={contactId} />}
 
           <Block title="Earlier calls" count={calls.length}>
             {calls.length === 0 ? (

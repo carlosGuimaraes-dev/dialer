@@ -78,6 +78,36 @@ export interface Person {
   createdAt: string | null;
 }
 
+export interface Buybox {
+  id: string;
+  name: string;
+  status: string | null;
+  min_price: number | null;
+  max_price: number | null;
+  min_lot_size_sq_ft: number | null;
+  max_lot_size_sq_ft: number | null;
+  states: string[];
+  counties: string[];
+  cities: string[];
+  zoning: string[];
+  property_types: string[];
+}
+
+export interface BuilderMatch {
+  id: string;
+  name: string;
+  builder_id: string | null;
+  builder_name: string | null;
+  match_score: number | null;
+  score: { price: number | null; proximity: number | null; buybox_fit: number | null };
+  distance_miles: number | null;
+  interest_status: string | null;
+  is_active: boolean;
+  last_scored_at: string | null;
+  max_price: number | null;
+  buybox: Buybox | null;
+}
+
 export interface PersonInput {
   name: string;
   jobTitle?: string;
@@ -339,6 +369,14 @@ export const api = {
     update: (id: string, data: Partial<PersonInput>) =>
       request<Person>(`/api/people/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/api/people/${id}`, { method: "DELETE" }),
+  },
+
+  /** What a builder will buy, and which builders fit a seller lot. Read-only. */
+  wholesale: {
+    matches: (landOpportunityId: string) =>
+      request<BuilderMatch[]>(`/api/wholesale/matches?landOpportunityId=${encodeURIComponent(landOpportunityId)}`),
+    buyboxes: (buyerId: string) =>
+      request<Buybox[]>(`/api/wholesale/buyboxes?buyerId=${encodeURIComponent(buyerId)}`),
   },
 
   /** Texts with a contact (agencyMessage), sent through Telnyx by the backend. */

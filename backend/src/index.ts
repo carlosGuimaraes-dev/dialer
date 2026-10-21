@@ -45,6 +45,7 @@ import { profilesRouter } from "./routes/profiles/index.js";
 import notifyRouter from "./routes/notify/index.js";
 import musicRouter from "./routes/music/index.js";
 import adminRoutes from "./routes/admin/index.js";
+import wholesaleRoutes from "./routes/wholesale/index.js";
 import { createLogger } from "./lib/logger/index.js";
 import { clientIp } from "./lib/clientIp/index.js";
 
@@ -218,6 +219,7 @@ app.use("/api/telnyx-webhook", webhooksRouter);
 app.use("/api/profiles", profilesRouter);
 app.use("/api/notify", notifyRouter);
 app.use("/api/music", musicRouter);
+app.use("/api/wholesale", wholesaleRoutes);
 app.use("/api/admin", adminRoutes);
 
 /**
