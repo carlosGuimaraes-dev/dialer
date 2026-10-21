@@ -154,7 +154,8 @@ export function loadOperatorSession(): OperatorSession | null {
 
 /** Start sign-in: stash the verifier, redirect to Twenty. */
 export async function beginSignIn(): Promise<void> {
-  if (!API_URL) throw new Error("VITE_API_URL must be set — the dialer backend is required for login.");
+  // An empty API_URL means same origin, which the dev server proxies to the
+  // backend; publicConfig() reports a missing backend on its own.
   const config = await publicConfig();
   // Guard against the classic port-mismatch trap: Twenty returns the browser
   // to config.redirectUri after authorization. If this tab runs anywhere else
