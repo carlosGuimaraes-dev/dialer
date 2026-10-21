@@ -20,11 +20,11 @@ export const BUSINESS_OBJECTS = ["landOpportunity", "buyer", "buybox", "builderM
 
 /**
  * Objects an earlier version of the dialer created and the current manifest no
- * longer lists (prospects and leads became landOpportunity and buyer). They may
- * still exist in the workspace, and their sidebar rows are dialer leftovers
- * either way.
+ * longer lists: prospects and leads became landOpportunity and buyer, and the
+ * agency person/offer pair belongs to the agency funnel. They may still exist
+ * in the workspace, and their sidebar rows are dialer leftovers either way.
  */
-const LEGACY_INTERNAL_OBJECTS = ["agencyProspect", "agencyLead"] as const;
+const LEGACY_INTERNAL_OBJECTS = ["agencyProspect", "agencyLead", "agencyPerson", "agencyOffer"] as const;
 
 /** The dialer's own objects: hidden from the sidebar unless they are a business object. */
 export function internalObjectNames(): string[] {
