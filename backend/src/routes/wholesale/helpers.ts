@@ -11,17 +11,20 @@ export interface BuilderMatchRecord {
   interestStatus?: string | null;
   isActive?: boolean | null;
   lastScoredAt?: string | null;
-  builderMaxPrice?: { amount?: number; currencyCode?: string } | number | null;
+  builderMaxPrice?: Money;
   builder?: { id: string; name?: string | null } | null;
   buybox?: BuyboxRecord | null;
 }
+
+/** A CURRENCY column: { amount, currencyCode } or, from older rows, a bare number. */
+export type Money = { amount?: number | string | null; currencyCode?: string | null } | number | null | undefined;
 
 export interface BuyboxRecord {
   id: string;
   name?: string | null;
   status?: string | null;
-  minPrice?: number | { amount?: number } | null;
-  maxPrice?: number | { amount?: number } | null;
+  minPrice?: Money;
+  maxPrice?: Money;
   minLotSizeSqFt?: number | null;
   maxLotSizeSqFt?: number | null;
   states?: string[] | string | null;
@@ -33,7 +36,7 @@ export interface BuyboxRecord {
 }
 
 /** CURRENCY arrives as { amount, currencyCode } or as a plain number. */
-export function amount(v: BuyboxRecord["minPrice"]): number | null {
+export function amount(v: Money): number | null {
   if (typeof v === "number") return v;
   const n = Number(v?.amount);
   return Number.isFinite(n) ? n : null;
@@ -79,7 +82,7 @@ export function mapBuilderMatch(r: BuilderMatchRecord) {
     interest_status: r.interestStatus ?? null,
     is_active: r.isActive !== false,
     last_scored_at: r.lastScoredAt ?? null,
-    max_price: amount(r.builderMaxPrice as BuyboxRecord["minPrice"]),
+    max_price: amount(r.builderMaxPrice ?? null),
     buybox: r.buybox ? mapBuybox(r.buybox) : null,
   };
 }
