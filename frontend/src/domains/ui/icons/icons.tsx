@@ -16,6 +16,8 @@ import {
   faBan,
   faBell,
   faBookOpen,
+  faBullseye,
+  faBuilding,
   faCalendar,
   faCalendarDays,
   faChartColumn,
@@ -206,6 +208,8 @@ export const Trash2 = solid(faTrashCan, "Trash2");
 export const TrendingUp = solid(faArrowTrendUp, "TrendingUp");
 export const User = solid(faUser, "User");
 export const Users = solid(faUsers, "Users");
+export const Target = solid(faBullseye, "Target");
+export const Building = solid(faBuilding, "Building");
 export const Voicemail = solid(faVoicemail, "Voicemail");
 export const Video = solid(faVideo, "Video");
 export const X = solid(faXmark, "X");

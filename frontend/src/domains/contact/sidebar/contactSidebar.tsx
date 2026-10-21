@@ -39,6 +39,7 @@ import { initials } from "@/domains/contact/model";
 import { ContactPeople } from "@/domains/contact/people";
 import { usePeople } from "@/domains/contact/people";
 import { useContactFacets } from "@/domains/contact/list";
+import { BuilderMatchesSection, BuyboxesSection } from "@/domains/wholesale/matches";
 
 
 type Patch = Record<string, unknown>;
@@ -305,6 +306,8 @@ export function ContactSidebar({
         </section>
 
         <ContactPeople contact={contact} />
+
+        {contact.type === "lead" ? <BuilderMatchesSection landOpportunityId={contact.id} /> : <BuyboxesSection buyerId={contact.id} />}
 
         {/* field search */}
         <div className="flex items-center gap-2">
