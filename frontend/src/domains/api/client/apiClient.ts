@@ -171,6 +171,13 @@ export const api = {
       }),
     websiteStatus: (id: string) =>
       request<{
+        /**
+         * False when this workspace has no offer site (the wholesale domain):
+         * only the agency funnel configures pages, industry copy and the SMS
+         * outreach labels, so the panel has nothing to show.
+         */
+        applicable?: boolean;
+        reason?: string;
         /** The one page we send (offer site), and whether this app may embed it. */
         page: { url: string; previewAllowed: boolean; previewBlockedReason: string | null };
         prospect: {

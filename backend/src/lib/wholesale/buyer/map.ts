@@ -75,6 +75,29 @@ export function buyerToFrontendStatus(r: BuyerRecord): string {
 }
 
 /** Phone/email live on the buyer's point of contact (a person row). */
+export function buyerContactOf(r: { pointOfContact?: unknown } | null | undefined): { phone: string | null; email: string | null; name: string | null } {
+  const poc = (r?.pointOfContact ?? null) as any;
+  if (!poc) return { phone: null, email: null, name: null };
+  return { phone: phoneText(poc.phones), email: poc.emails?.primaryEmail?.trim() || null, name: personName(poc.name) };
+}
+
+/** Twenty PHONES composite -> E.164, tolerating a plain string. */
+function phoneText(p: any): string | null {
+  if (typeof p === "string") return p.trim() || null;
+  const num = String(p?.primaryPhoneNumber ?? "").trim();
+  if (!num) return null;
+  if (num.startsWith("+")) return num;
+  const code = String(p?.primaryPhoneCallingCode ?? p?.primaryPhoneCountryCode ?? "").replace(/\D/g, "");
+  return code ? `+${code}${num.replace(/\D/g, "")}` : num;
+}
+
+/** Twenty name fields arrive as { firstName, lastName } or as a string. */
+function personName(name: any): string | null {
+  if (typeof name === "string") return name.trim() || null;
+  const full = [name?.firstName, name?.lastName].filter(Boolean).join(" ").trim();
+  return full || null;
+}
+
 export function mapBuyerListItem(r: BuyerRecord, contact?: { phone?: string | null; email?: string | null } | null) {
   const [first, ...rest] = String(r.name ?? "").trim().split(/\s+/).filter(Boolean);
   return {

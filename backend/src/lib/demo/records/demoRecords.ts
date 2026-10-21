@@ -1,12 +1,17 @@
 /*
- * The demo workspace: a small, fictional agency calling local businesses.
- * Every record is in the shape Twenty stores it, so the same data seeds a
- * fresh workspace (seed/seedDemo.ts) and feeds the screenshot capture
- * (scripts/screenshots), which maps it through the real route helpers.
+ * The demo workspace: a small, fictional land acquisition team calling
+ * absentee owners and builders. Every record is in the shape Twenty stores it,
+ * so the same data seeds a fresh workspace (seed/seedDemo.ts) and feeds the
+ * screenshot capture (scripts/screenshots), which maps it through the real
+ * route helpers.
+ *
+ * Sellers are landOpportunities (the dialer's "prospect" role), builders are
+ * buyers (the "lead" role): the same two objects the live workspace uses.
  *
  * Nothing here is real. Phone numbers are in the 555-01xx range reserved for
- * fiction, e-mail and web addresses use the .example domain, and ids are
- * fixed so seeding twice updates rather than duplicates.
+ * fiction, e-mail and web addresses use the .example domain, parcel numbers
+ * follow no county's format, and ids are fixed so seeding twice updates rather
+ * than duplicates.
  */
 
 /** A fixed, valid UUID per record: group 1-9, n 1-999. Pure. */
@@ -30,17 +35,6 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-function phoneComposite(e164: string) {
-  const calling = e164.startsWith("+1") ? "+1" : e164.startsWith("+44") ? "+44" : e164.startsWith("+353") ? "+353" : "+1";
-  const country = calling === "+44" ? "GB" : calling === "+353" ? "IE" : "US";
-  return {
-    primaryPhoneNumber: e164.slice(calling.length),
-    primaryPhoneCountryCode: country,
-    primaryPhoneCallingCode: calling,
-    additionalPhones: [],
-  };
-}
-
 function actor(m: Member) {
   return { source: "MANUAL", workspaceMemberId: m.id, name: m.name, context: null };
 }
@@ -50,60 +44,61 @@ function note(at: Date, author: Member, body: string): string {
 }
 
 const CAMPAIGNS = [
-  { n: 1, name: "Window Tinting - Texas", campaignType: "COLD_CALL", status: "ACTIVE", utmSource: "OUTBOUND", industryId: "WINDOW_TINTING", urlKey: "window-tinting" },
-  { n: 2, name: "Auto Detailing - Colorado", campaignType: "COLD_CALL", status: "ACTIVE", utmSource: "OUTBOUND", industryId: "AUTO_DETAILING", urlKey: "auto-detailing" },
-  { n: 3, name: "Nurseries - Pacific Northwest", campaignType: "OUTBOUND", status: "DRAFT", utmSource: "BLENDED", industryId: "NURSERY_SCHOOL", urlKey: "nursery-school" },
+  { n: 1, name: "Travis County absentees", campaignType: "COLD_CALL", status: "ACTIVE", utmSource: "OUTBOUND", industryId: "VACANT_LOT", urlKey: "travis-absentees" },
+  { n: 2, name: "Infill lots - Austin core", campaignType: "COLD_CALL", status: "ACTIVE", utmSource: "OUTBOUND", industryId: "INFILL_LOT", urlKey: "austin-infill" },
+  { n: 3, name: "Builder outreach", campaignType: "OUTBOUND", status: "DRAFT", utmSource: "BLENDED", industryId: "BUILDABLE_LOT", urlKey: "builders" },
 ];
 
-/** [name, city, region, country, niche, label, phone, rating, reviews, status, campaign] */
-type ProspectRow = [string, string, string, string, string, string, string, number, number, string, number];
+/**
+ * [owner, parcel, street, city, state, zip, county, zoning, sqft, property type,
+ *  asking price, seller stage, cold call status, campaign, phone]
+ */
+type SellerRow = [string, string, string, string, string, string, string, string, number, string, number, string, string, number, string];
 
-const PROSPECTS: ProspectRow[] = [
-  ["Clearview Window Tint", "Austin", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+15125550123", 4.8, 212, "INTERESTED", 1],
-  ["Lone Star Tint Co", "Austin", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+15125550131", 4.6, 98, "CALLBACK", 1],
-  ["Shade Masters", "Round Rock", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+15125550137", 4.9, 341, "CONTACTED", 1],
-  ["Hill Country Films", "San Marcos", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+15125550144", 4.4, 57, "NEW", 1],
-  ["Capitol Auto Glass & Tint", "Austin", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+15125550152", 4.7, 176, "NOT_INTERESTED", 1],
-  ["Bluebonnet Tint Studio", "Georgetown", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+15125550158", 5.0, 44, "NEW", 1],
-  ["Pflugerville Tint Works", "Pflugerville", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+15125550163", 4.5, 121, "CONVERTED", 1],
-  ["Riverside Ceramic Tint", "Austin", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+15125550169", 4.3, 39, "NEW", 1],
-  ["Mile High Detailing", "Denver", "CO", "US", "Auto Detailing", "AUTO_DETAILING", "+13035550112", 4.9, 287, "INTERESTED", 2],
-  ["Front Range Shine", "Boulder", "CO", "US", "Auto Detailing", "AUTO_DETAILING", "+13035550118", 4.7, 132, "CONTACTED", 2],
-  ["Peak Performance Auto Spa", "Aurora", "CO", "US", "Auto Detailing", "AUTO_DETAILING", "+13035550125", 4.6, 75, "CALLBACK", 2],
-  ["Red Rocks Ceramic Coating", "Lakewood", "CO", "US", "Auto Detailing", "AUTO_DETAILING", "+13035550133", 4.8, 164, "NEW", 2],
-  ["Cherry Creek Detail Co", "Denver", "CO", "US", "Auto Detailing", "AUTO_DETAILING", "+13035550139", 4.2, 31, "DO_NOT_CONTACT", 2],
-  ["Summit Mobile Detailing", "Littleton", "CO", "US", "Auto Detailing", "AUTO_DETAILING", "+13035550146", 4.9, 58, "NEW", 2],
-  ["Rose City Little Learners", "Portland", "OR", "US", "Nursery School", "NURSERY_SCHOOL", "+15035550114", 4.9, 66, "NEW", 3],
-  ["Cascade Kids Nursery", "Beaverton", "OR", "US", "Nursery School", "NURSERY_SCHOOL", "+15035550121", 4.7, 48, "CONTACTED", 3],
-  ["Puget Sound Preschool", "Tacoma", "WA", "US", "Nursery School", "NURSERY_SCHOOL", "+12535550127", 4.8, 92, "INTERESTED", 3],
-  ["Harbour Body Repairs", "Vancouver", "BC", "CA", "Auto Body", "AUTO_PAINT_AND_BODY_SHOPS", "+16045550135", 4.5, 210, "NEW", 2],
-  ["Maple Leaf Collision", "Toronto", "ON", "CA", "Auto Body", "AUTO_PAINT_AND_BODY_SHOPS", "+14165550141", 4.4, 133, "CALLBACK", 2],
-  ["Liffey Motor Works", "Dublin", "Dublin", "IE", "Auto Body", "AUTO_PAINT_AND_BODY_SHOPS", "+35315550148", 4.6, 87, "NEW", 2],
-  ["Thames Valley Builders", "Reading", "Berkshire", "GB", "General contractor", "GENERAL_TRADES", "+441185550156", 4.3, 64, "CONTACTED", 3],
-  ["Gulf Coast Tint Pros", "Houston", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+17135550161", 4.6, 154, "NEW", 1],
-  ["Alamo Window Film", "San Antonio", "TX", "US", "Window Tinting", "WINDOW_TINTING", "+12105550166", 4.7, 102, "CONTACTED", 1],
-  ["Bayou City Detailing", "Houston", "TX", "US", "Auto Detailing", "AUTO_DETAILING", "+17135550172", 4.8, 119, "NEW", 2],
+const SELLERS: SellerRow[] = [
+  ["Maria Lopez", "0451-2210", "1204 Cedar St", "Austin", "TX", "78702", "Travis", "SF-3", 8712, "INFILL_LOT", 145000, "INTERESTED", "INTERESTED", 1, "+15125550124"],
+  ["Delia Marsh", "0451-3348", "3307 Cherry Ln", "Austin", "TX", "78703", "Travis", "SF-2", 10450, "TEARDOWN", 210000, "CONTACTED", "CALLBACK", 2, "+15125550131"],
+  ["Robert Vance", "0463-8820", "912 Bluebonnet Rd", "Round Rock", "TX", "78664", "Williamson", "R-1", 15800, "VACANT_LOT", 96000, "READY_FOR_OUTREACH", "NEW", 1, "+15125550137"],
+  ["Ana Ferreira", "0451-9917", "4801 Manor Rd", "Austin", "TX", "78723", "Travis", "SF-3-NP", 6230, "VACANT_LOT", 132000, "NOT_INTERESTED", "NOT_INTERESTED", 2, "+15125550144"],
+  ["Charles Okonkwo", "0470-1187", "18 Hillview Ct", "San Marcos", "TX", "78666", "Hays", "R-1", 22600, "BUILDABLE_LOT", 88000, "NEW_LEAD", "NEW", 1, "+15125550152"],
+  ["Bethany Cruz", "0451-5522", "4708 Duval St", "Austin", "TX", "78751", "Travis", "SF-3", 7920, "INFILL_LOT", 265000, "INTERESTED", "INTERESTED", 2, "+15125550158"],
+  ["Priya Nair", "0488-7710", "2210 Wells Branch Pkwy", "Pflugerville", "TX", "78660", "Travis", "SF-1", 11900, "TEARDOWN", 118000, "CONTACTED", "CONTACTED", 1, "+15125550163"],
+  ["Douglas Hale", "0451-6604", "705 Rosewood Ave", "Austin", "TX", "78702", "Travis", "SF-3", 6540, "INFILL_LOT", 189000, "READY_FOR_OUTREACH", "NEW", 2, "+15125550169"],
+  ["Wilma Tucker", "0512-3301", "14900 Wells Port Dr", "Manor", "TX", "78653", "Travis", "R-1", 43560, "VACANT_LOT", 74000, "NEW_LEAD", "NEW", 1, "+15125550176"],
+  ["R. Molina (estate)", "0512-4418", "3300 Old Highway 20", "Elgin", "TX", "78621", "Bastrop", "AG", 218000, "VACANT_LOT", 155000, "NO_RESPONSE", "CALLBACK", 1, "+15125550182"],
+  ["Terrence Boyd", "0533-9902", "5510 Sendero Verde", "Austin", "TX", "78735", "Travis", "RR", 31200, "BUILDABLE_LOT", 410000, "INTERESTED", "INTERESTED", 2, "+15125550191"],
+  ["Lorraine Kuhn", "0533-1218", "8601 Marsh Dr", "Austin", "TX", "78750", "Travis", "SF-2", 13800, "TEARDOWN", 227000, "DO_NOT_CONTACT", "DO_NOT_CONTACT", 2, "+15125550203"],
+  ["Hector Salinas", "0467-5514", "1403 Pecan St", "Buda", "TX", "78610", "Hays", "R-1", 9600, "INFILL_LOT", 101000, "CONTACTED", "CONTACTED", 1, "+15125550211"],
+  ["Gwen Alvarado", "0467-6621", "9 Spring Hollow", "Kyle", "TX", "78640", "Hays", "R-1", 17100, "VACANT_LOT", 89000, "READY_FOR_OUTREACH", "NEW", 1, "+15125550220"],
+  ["Frank Delacroix", "0451-8830", "3602 Larry Ln", "Austin", "TX", "78702", "Travis", "SF-3", 7300, "INFILL_LOT", 174000, "CONTACT_ATTEMPTED", "CALLBACK", 2, "+15125550237"],
+  ["Ivy Nakamura", "0551-2244", "12 Windmill Way", "Dripping Springs", "TX", "78620", "Hays", "R-R", 87120, "BUILDABLE_LOT", 289000, "NEW_LEAD", "NEW", 3, "+15125550245"],
+  ["Owen Whitfield", "0551-3355", "990 Ranch Road 12", "Wimberley", "TX", "78676", "Hays", "R-R", 130680, "VACANT_LOT", 199000, "ON_HOLD", "CALLBACK", 3, "+15125550252"],
+  ["Sonia Baptist", "0570-7788", "2208 E 12th St", "Austin", "TX", "78702", "Travis", "SF-3", 5980, "TEARDOWN", 236000, "INTERESTED", "INTERESTED", 2, "+15125550261"],
+  ["Merle Ostrowski", "0570-8899", "1704 Greenwood Ave", "Austin", "TX", "78702", "Travis", "SF-3", 6250, "INFILL_LOT", 158000, "NEW_LEAD", "NEW", 2, "+15125550270"],
+  ["Lena Chatsworth", "0591-1122", "4501 Avenue G", "Austin", "TX", "78751", "Travis", "SF-3", 7040, "VACANT_LOT", 205000, "CONTACTED", "CONTACTED", 2, "+15125550288"],
 ];
 
-const OUTBOUND_BY_STATUS: Record<string, string> = {
-  NEW: "NEEDS_VIDEO",
-  CONTACTED: "READY_FOR_SMS",
-  INTERESTED: "READY_FOR_SMS",
-  CALLBACK: "FOLLOW_UP_DUE",
-  NOT_INTERESTED: "NEGATIVE_REPLY",
-  CONVERTED: "POSITIVE_REPLY",
-  DO_NOT_CONTACT: "DO_NOT_CONTACT",
-};
+/** [builder firm, stage, source, notes, dial number] */
+type BuilderRow = [string, string, string, string, string];
+
+const BUILDERS: BuilderRow[] = [
+  ["Ridgeline Homes", "ACTIVE_BUYER", "REFERRAL", "Buys 2-10 infill lots a quarter in 78702/78723. Cash, 14-day close.", "+15125550301"],
+  ["Cedar & Stone Builders", "QUALIFIED", "WEBSITE", "Wants teardowns under 8,000 sq ft in Travis County, at least two a month.", "+15125550302"],
+  ["Bluebonnet Custom Homes", "CONTACTED", "DIRECT_OUTREACH", "Prefers Hays County; asked for a buybox on buildable acreage.", "+15125550303"],
+  ["Hill Country Holdings", "INSERTED", "IMPORT", "Imported from the county builder list; not contacted yet.", "+15125550304"],
+  ["Vista Verde Development", "NOT_INTERESTED", "EVENT", "Met at the Austin land expo. Full pipeline through Q3.", "+15125550305"],
+  ["Sandstone Capital", "ACTIVE_BUYER", "REFERRAL", "Does lot splits; interested in anything over 20,000 sq ft.", "+15125550306"],
+];
 
 const FEATURED_TRANSCRIPT = [
-  "Alex: Hi, is this Maria? It's Alex from the agency, I was looking at Clearview's reviews this morning.",
-  "Maria: Yes, this is Maria. Two hundred reviews and counting, we're proud of that.",
-  "Alex: You should be. I noticed most of them mention ceramic tint, but your website doesn't show prices or let people book.",
-  "Maria: That's fair. People call us to ask the same three questions all day.",
-  "Alex: We built a one-page site for tint shops that answers those, shows your reviews and takes bookings. I can text you a preview of it with your name on it.",
-  "Maria: Sure, send it over. If it books appointments I'm interested.",
-  "Alex: Great. I'll text it now and call you Thursday at ten to walk through it.",
-  "Maria: Thursday works. Talk then.",
+  "Alex: Hi, is this Maria? It's Alex with Cedar Ridge Land. I'm calling about the lot on Cedar Street.",
+  "Maria: Yes, that's mine. My husband and I bought it years ago.",
+  "Alex: The county still lists it as vacant. Are you holding it for a build, or would you consider selling?",
+  "Maria: We were going to build, but that was before the kids moved away. We'd listen to an offer.",
+  "Alex: Comps on that block are running about 145 to 160 for a lot that size. If I brought you something in that range with a cash close, would that be worth a look?",
+  "Maria: It would. But I'd want to see the numbers in writing before I agree to anything.",
+  "Alex: Of course. I'll put a written offer together and send it over today. Can I follow up Thursday at ten?",
+  "Maria: Thursday at ten works. Talk then.",
 ].join("\n");
 
 export interface DemoRecords {
@@ -111,9 +106,8 @@ export interface DemoRecords {
   agencyCampaigns: any[];
   agencyScripts: any[];
   agencyPhones: any[];
-  agencyProspects: any[];
-  agencyLeads: any[];
-  agencyPeople: any[];
+  sellers: any[];
+  buyers: any[];
   agencyCalls: any[];
   agencyCallCampaigns: any[];
 }
@@ -121,8 +115,8 @@ export interface DemoRecords {
 /** The whole demo workspace, with times relative to `now`. Pure. */
 export function buildDemoRecords(now: Date = new Date()): DemoRecords {
   const t = (msAgo: number) => new Date(now.getTime() - msAgo).toISOString();
-  const [alex, sam, jordan, taylor] = DEMO_MEMBERS;
-  const team: Member[] = [alex, sam, jordan, taylor];
+  const [alex, sam, jordan] = DEMO_MEMBERS;
+  const team: Member[] = [...DEMO_MEMBERS];
 
   const agencyCampaigns = CAMPAIGNS.map((c) => ({
     id: demoId(2, c.n),
@@ -140,21 +134,20 @@ export function buildDemoRecords(now: Date = new Date()): DemoRecords {
   const agencyScripts = [
     {
       id: demoId(3, 1),
-      name: "Window tint opener",
+      name: "Absentee owner opener",
       campaignIdId: demoId(2, 1),
       scriptData: JSON.stringify({
         category: "cold_call",
         content: [
-          "Hi, is this {{first_name}}? It's {{agent}} from the agency.",
-          "I was reading {{company}}'s reviews this morning: {{review_count}} of them, mostly about ceramic tint.",
-          "Your site doesn't show prices or take bookings, so customers call to ask. We built a one-page site for tint shops that does both.",
-          "Can I text you a preview with your shop's name on it?",
+          "Hi, is this {{owner_name}}? It's {{agent}} with Cedar Ridge Land.",
+          "I'm calling about the vacant lot on {{street}} - are you still holding it, or would you consider an offer?",
+          "Comps on that block are running {{comp_low}} to {{comp_high}}. I buy for cash and close in two weeks.",
+          "Would a written offer be worth ten minutes of your time?",
         ].join("\n\n"),
         objection_responses: {
-          "We already have a website": { category: "website", response: "Most shops do. This one is built to book appointments, and you can keep your current site." },
-          "We get enough from referrals": { category: "demand", response: "Referrals are the best leads. This page gives them somewhere to book when they look you up." },
-          "It's too expensive": { category: "price", response: "The preview is free, and you only pay once it is booking jobs." },
-          "Just tell me what you do": { category: "clarity", response: "We send you a page with your reviews and prices that takes bookings by text." },
+          "We're going to build on it": { category: "timeline", response: "Most owners I call were, until the build slipped. If that day is more than a year out, cash now may beat holding." },
+          "It's not for sale": { category: "price", response: "Fair enough. If you tell me your number I'll keep it on file and call only if I can meet it." },
+          "How did you get my number": { category: "source", response: "It's on the county record for the parcel. I can take you off my list right now if you'd prefer." },
         },
       }),
       createdAt: t(20 * DAY),
@@ -162,18 +155,18 @@ export function buildDemoRecords(now: Date = new Date()): DemoRecords {
     },
     {
       id: demoId(3, 2),
-      name: "Detailing follow-up",
-      campaignIdId: demoId(2, 2),
+      name: "Builder buybox follow-up",
+      campaignIdId: demoId(2, 3),
       scriptData: JSON.stringify({
         category: "follow_up",
         content: [
-          "Hi {{first_name}}, it's {{agent}} again. Did you get a chance to open the page I texted?",
-          "Most detailers we work with get their first booking from it in the first week.",
-          "Would Tuesday or Wednesday suit for a ten-minute walk-through?",
+          "Hi {{first_name}}, it's {{agent}} again about the infill lots in 78702.",
+          "Two parcels fit the buybox you sent: both teardowns, both under eight thousand square feet.",
+          "Would Tuesday or Wednesday suit for a ten-minute walk of the numbers?",
         ].join("\n\n"),
         objection_responses: {
-          "I didn't see the text": { category: "follow_up", response: "No problem, I'll resend it now while we're on the phone." },
-          "I'm too busy right now": { category: "timing", response: "Understood. When's a quieter time this week? I'll call back then." },
+          "Send it by email": { category: "follow_up", response: "Will do - I'll send both sheets now while we're on the phone." },
+          "We're full this quarter": { category: "timing", response: "Understood. I'll hold them and check back the first week of next quarter." },
         },
       }),
       createdAt: t(12 * DAY),
@@ -183,80 +176,71 @@ export function buildDemoRecords(now: Date = new Date()): DemoRecords {
 
   const agencyPhones = [
     { id: demoId(4, 1), name: "Austin main line", phoneNumber: "+15125550100", countryCode: "US", numberType: "LONG_CODE", state: "ACTIVE", callState: "IDLE", messagingProfileId: "demo-profile", tenDlcCampaignId: "demo-10dlc", lastSyncedAt: t(2 * HOUR), createdAt: t(40 * DAY), updatedAt: t(2 * HOUR) },
-    { id: demoId(4, 2), name: "Denver line", phoneNumber: "+13035550100", countryCode: "US", numberType: "LONG_CODE", state: "ACTIVE", callState: "ACTIVE", claimedByMemberId: sam.id, claimedByEmail: sam.email, claimedAt: t(3 * MINUTE), lastHeartbeatAt: t(2_000), messagingProfileId: "demo-profile", tenDlcCampaignId: "demo-10dlc", lastSyncedAt: t(2 * HOUR), createdAt: t(40 * DAY), updatedAt: t(3 * MINUTE) },
-    { id: demoId(4, 3), name: "Portland line", phoneNumber: "+15035550100", countryCode: "US", numberType: "LONG_CODE", state: "PAUSED", callState: "IDLE", messagingProfileId: "demo-profile", tenDlcCampaignId: "demo-10dlc", lastSyncedAt: t(1 * DAY), createdAt: t(40 * DAY), updatedAt: t(1 * DAY) },
+    { id: demoId(4, 2), name: "Hays County line", phoneNumber: "+13035550100", countryCode: "US", numberType: "LONG_CODE", state: "ACTIVE", callState: "ACTIVE", claimedByMemberId: sam.id, claimedByEmail: sam.email, claimedAt: t(3 * MINUTE), lastHeartbeatAt: t(2_000), messagingProfileId: "demo-profile", tenDlcCampaignId: "demo-10dlc", lastSyncedAt: t(2 * HOUR), createdAt: t(40 * DAY), updatedAt: t(3 * MINUTE) },
+    { id: demoId(4, 3), name: "Builder line", phoneNumber: "+15035550100", countryCode: "US", numberType: "LONG_CODE", state: "PAUSED", callState: "IDLE", messagingProfileId: "demo-profile", tenDlcCampaignId: "demo-10dlc", lastSyncedAt: t(1 * DAY), createdAt: t(40 * DAY), updatedAt: t(1 * DAY) },
     { id: demoId(4, 4), name: "Toll-free", phoneNumber: "+18885550100", countryCode: "US", numberType: "TOLL_FREE", state: "ACTIVE", callState: "IDLE", messagingProfileId: "demo-profile", tenDlcCampaignId: "demo-10dlc", lastSyncedAt: t(2 * HOUR), createdAt: t(40 * DAY), updatedAt: t(2 * HOUR) },
   ];
 
-  const agencyProspects = PROSPECTS.map(([name, city, region, country, niche, label, phone, rating, reviewCount, status, campaign], i) => {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    const owner = team[i % team.length];
+  const sellers = SELLERS.map(([owner, parcel, street, city, state, zip, county, zoning, sqft, type, asking, sellerStage, status, campaign, phone], i) => {
+    const member = team[i % team.length];
     return {
       id: demoId(5, i + 1),
-      name,
-      slug,
-      phone,
-      phoneNumber: phoneComposite(phone),
-      primaryPhone: phoneComposite(phone),
-      phoneValid: true,
-      fullAddress: `${100 + i * 17} Main Street, ${city}, ${region}`,
+      name: `${street} - ${city}`,
+      ownerName: owner,
+      parcelNumber: parcel,
+      propertyAddress: street,
       city,
-      region,
-      country,
-      niche,
-      label,
-      website: `https://${slug}.example`,
-      email: `hello@${slug}.example`,
-      rating,
-      reviewCount,
+      state,
+      zipCode: zip,
+      county,
+      zoning,
+      lotSizeSqFt: sqft,
+      propertyType: type,
+      askingPrice: asking,
+      estimatedValue: Math.round(asking * (0.9 + ((i * 7) % 25) / 100)),
+      opportunityStatus: sellerStage === "INTERESTED" ? "QUALIFIED" : "RESEARCHING",
+      sellerStage,
+      leadSource: i % 4 === 0 ? "COUNTY_RECORDS" : i % 4 === 1 ? "DIRECT_MAIL" : i % 4 === 2 ? "DRIVING_FOR_DOLLARS" : "REFERRAL",
       coldCallStatus: status,
-      outboundLabel: OUTBOUND_BY_STATUS[status] ?? "NEEDS_ENRICHMENT",
-      outboundState: status === "NEW" ? "ENRICHED" : "AWAITING_REPLY",
-      videoStatus: i % 3 === 0 ? "ATTACHED" : i % 3 === 1 ? "RENDERED" : "QUEUED",
-      utmSource: "OUTBOUND",
-      googleReviewsUrl: `https://maps.example/${slug}`,
-      campaignIdId: demoId(2, campaign),
-      createdByMemberId: owner.id,
+      phone,
+      email: `owner${i + 1}@example.com`,
       notes: i === 0
         ? [
-            note(new Date(now.getTime() - 26 * HOUR), alex, "Owner is Maria. Busy before 10am, best to call late morning."),
-            note(new Date(now.getTime() - 40 * MINUTE), alex, "Interested in the booking page. Sent the preview by text, follow-up call booked for Thursday 10:00."),
+            note(new Date(now.getTime() - 26 * HOUR), alex, "Owner is Maria. Husband passed; open to a cash offer but wants the numbers in writing."),
+            note(new Date(now.getTime() - 40 * MINUTE), alex, "Interested at 145-160. Written offer going out today, follow-up Thursday 10:00."),
           ].join("\n\n")
         : null,
+      createdByMemberId: member.id,
+      campaignIdId: demoId(2, campaign),
       createdAt: t((20 - (i % 15)) * DAY),
       updatedAt: t((i % 5) * HOUR + 30 * MINUTE),
     };
   });
 
-  const agencyLeads = [
-    { id: demoId(6, 1), name: "Priya Nair", contactName: "Priya Nair", company: "Pflugerville Tint Works", phone: phoneComposite("+15125550163"), email: { primaryEmail: "priya@pflugerville-tint-works.example", additionalEmails: [] }, coldCallStatus: "CONVERTED", source: "cold_call", note: "Booked a launch call for next week.", createdById: alex.id, campaignIdId: demoId(2, 1), createdAt: t(4 * DAY), updatedAt: t(1 * DAY) },
-    { id: demoId(6, 2), name: "Marcus Webb", contactName: "Marcus Webb", company: "Mile High Detailing", phone: phoneComposite("+13035550112"), email: { primaryEmail: "marcus@mile-high-detailing.example", additionalEmails: [] }, coldCallStatus: "INTERESTED", source: "cold_call", note: "Wants pricing for two locations.", createdById: sam.id, campaignIdId: demoId(2, 2), createdAt: t(2 * DAY), updatedAt: t(5 * HOUR) },
-    { id: demoId(6, 3), name: "Hannah Okafor", contactName: "Hannah Okafor", company: "Puget Sound Preschool", phone: phoneComposite("+12535550127"), email: { primaryEmail: "hannah@puget-sound-preschool.example", additionalEmails: [] }, coldCallStatus: "CALLBACK", source: "website", note: "Call back after the open day.", createdById: jordan.id, campaignIdId: demoId(2, 3), createdAt: t(1 * DAY), updatedAt: t(3 * HOUR) },
-  ];
+  const buyers = BUILDERS.map(([firm, stage, source, notes, phone], i) => ({
+    id: demoId(6, i + 1),
+    name: firm,
+    stage,
+    source,
+    coldCallStatus: stage === "ACTIVE_BUYER" ? "CONVERTED" : stage === "QUALIFIED" ? "INTERESTED" : stage === "NOT_INTERESTED" ? "NOT_INTERESTED" : stage === "CONTACTED" ? "CONTACTED" : "NEW",
+    phone,
+    notes,
+    lastCallSummary: i < 2 ? "Confirmed the buybox and the monthly target." : null,
+    lastCallAt: i < 2 ? t((3 + i * 2) * DAY) : null,
+    createdAt: t((18 - i) * DAY),
+    updatedAt: t((i % 4) * HOUR + 15 * MINUTE),
+  }));
 
-  const featured = agencyProspects[0];
-  const agencyPeople = [
-    { id: demoId(7, 1), name: "Maria Lopez", jobTitle: "Owner", personRole: "Decision maker", city: "Austin", phones: phoneComposite("+15125550124"), emails: { primaryEmail: "maria@clearview-window-tint.example", additionalEmails: [] }, linkedinLink: { primaryLinkUrl: "https://linkedin.example/in/maria-lopez" }, prospectId: featured.id, createdAt: t(26 * HOUR) },
-    { id: demoId(7, 2), name: "Dev Shah", jobTitle: "Shop manager", personRole: "Gatekeeper", city: "Austin", phones: phoneComposite("+15125550125"), emails: { primaryEmail: "dev@clearview-window-tint.example", additionalEmails: [] }, linkedinLink: null, prospectId: featured.id, createdAt: t(26 * HOUR) },
-  ];
+  const featured = sellers[0];
 
-  // Calls: the featured conversation first, then a spread over two weeks.
-  const DISPOSITIONS = ["INTERESTED", "NO_ANSWER", "VOICEMAIL", "CALLBACK", "NOT_INTERESTED", "NO_ANSWER", "GOOD_NUMBER", "APPOINTMENT_SET", "VOICEMAIL", "BAD_NUMBER", "NO_ANSWER", "CALLBACK"];
-  const SUMMARIES: Record<string, string> = {
-    INTERESTED: "The owner liked the booking page idea and asked for a preview by text.",
-    CALLBACK: "Reached the front desk; the owner asked for a call back later this week.",
-    NOT_INTERESTED: "Happy with their current agency and declined a preview.",
-    APPOINTMENT_SET: "Booked a ten-minute walk-through of the page for Tuesday.",
-    GOOD_NUMBER: "Confirmed this is the owner's direct line; no decision yet.",
-  };
   const agencyCalls: any[] = [
     {
       id: demoId(8, 1),
-      name: "Outbound call to Clearview Window Tint",
+      name: `Outbound call to ${featured.ownerName}`,
       direction: "OUTBOUND",
       status: "COMPLETED",
-      disposition: "APPOINTMENT_SET",
-      notes: "Maria wants the booking page. Preview texted, follow-up Thursday 10:00.",
+      disposition: "INTERESTED",
+      notes: "Maria will review a written offer. Follow-up Thursday 10:00.",
       fromNumber: "+15125550100",
       toNumber: featured.phone,
       startedAt: t(45 * MINUTE),
@@ -266,27 +250,27 @@ export function buildDemoRecords(now: Date = new Date()): DemoRecords {
       telnyxRecordingId: "demo-recording",
       transcript: FEATURED_TRANSCRIPT,
       transcriptionStatus: "READY",
-      summary: "Maria, the owner, wants a booking page for Clearview. A preview was texted and a follow-up call is set for Thursday at 10:00.",
-      aiSummary: "Maria, the owner, wants a booking page for Clearview. A preview was texted and a follow-up call is set for Thursday at 10:00.",
+      summary: "Maria owns the Cedar Street lot; her build plans lapsed and she is open to a cash offer. Written offer to follow, call booked for Thursday 10:00.",
+      aiSummary: "Maria owns the Cedar Street lot; her build plans lapsed and she is open to a cash offer. Written offer to follow, call booked for Thursday 10:00.",
       aiSentiment: "POSITIVE",
       aiScore: 88,
       aiKeyPoints: JSON.stringify([
-        "Opened with a specific observation about the shop's 212 reviews.",
-        "Named the gap: no prices or booking on the current website.",
-        "Owner confirmed customers call with the same three questions all day.",
-        "Agreed next step: preview by text and a call on Thursday at 10:00.",
+        "Confirmed ownership and that the parcel is still vacant.",
+        "Owner's build plans lapsed; she is open to a cash offer.",
+        "Quoted comps of 145-160 and she asked for the numbers in writing.",
+        "Next step: written offer today, follow-up Thursday at 10:00.",
       ]),
       aiScores: JSON.stringify({ conversion: 5, politeness: 5, questioning: 4, engagement: 5, sentiment: 4 }),
       aiConfidence: 0.92,
       aiModel: "gpt-4o-mini",
       aiAnalyzedAt: t(40 * MINUTE),
       debugLog: "invite sent\n100 Trying\n180 Ringing\n200 OK (call control id captured)\nrecording started\nBYE sent by agent",
-      meetingUrl: "https://meet.example/clearview-walkthrough",
+      meetingUrl: "https://meet.example/cedar-street-walkthrough",
       meetingProvider: "GOOGLE_MEET",
       meetingStatus: "SCHEDULED",
       meetingAt: new Date(now.getTime() + 2 * DAY).toISOString(),
       agencyPhoneId: demoId(4, 1),
-      agencyProspectId: featured.id,
+      landOpportunityId: featured.id,
       createdByMemberId: alex.id,
       createdBy: actor(alex),
       createdAt: t(45 * MINUTE),
@@ -294,7 +278,7 @@ export function buildDemoRecords(now: Date = new Date()): DemoRecords {
     },
     {
       id: demoId(8, 2),
-      name: "Outbound call to Clearview Window Tint",
+      name: `Outbound call to ${featured.ownerName}`,
       direction: "OUTBOUND",
       status: "NO_ANSWER",
       disposition: "VOICEMAIL",
@@ -305,33 +289,45 @@ export function buildDemoRecords(now: Date = new Date()): DemoRecords {
       durationSeconds: 31,
       transcriptionStatus: "NONE",
       agencyPhoneId: demoId(4, 1),
-      agencyProspectId: featured.id,
+      landOpportunityId: featured.id,
       createdByMemberId: alex.id,
       createdBy: actor(alex),
       createdAt: t(26 * HOUR),
       updatedAt: t(26 * HOUR),
     },
   ];
+
+  const DISPOSITIONS = ["INTERESTED", "NO_ANSWER", "VOICEMAIL", "CALLBACK", "NOT_INTERESTED", "NO_ANSWER", "GOOD_NUMBER", "APPOINTMENT_SET", "VOICEMAIL", "BAD_NUMBER", "NO_ANSWER", "CALLBACK"];
+  const SUMMARIES: Record<string, string> = {
+    INTERESTED: "Owner is open to an offer and asked for the numbers in writing.",
+    CALLBACK: "Reached the household; asked for a call back later this week.",
+    NOT_INTERESTED: "Owner is holding the lot for a family build.",
+    APPOINTMENT_SET: "Booked a walk of the parcel and the comps for Tuesday.",
+    GOOD_NUMBER: "Confirmed this is the owner's mobile; no decision yet.",
+  };
+
   for (let i = 0; i < 46; i++) {
-    const p = agencyProspects[1 + (i * 7) % (agencyProspects.length - 1)];
+    const p = sellers[1 + (i * 7) % (sellers.length - 1)];
     const m = team[i % team.length];
     const disposition = DISPOSITIONS[i % DISPOSITIONS.length];
     const answered = !["NO_ANSWER", "VOICEMAIL", "BAD_NUMBER"].includes(disposition);
     const duration = answered ? 60 + ((i * 53) % 300) : disposition === "VOICEMAIL" ? 25 + (i % 20) : 0;
     const ago = 2 * HOUR + i * 7 * HOUR + (i % 3) * 13 * MINUTE;
-    const phone = p.region === "CO" ? demoId(4, 2) : p.region === "OR" || p.region === "WA" ? demoId(4, 3) : demoId(4, 1);
-    const from = agencyPhones.find((x) => x.id === phone)!.phoneNumber;
+    const phoneRow = p.county === "Hays" ? demoId(4, 2) : demoId(4, 1);
+    const from = agencyPhones.find((x) => x.id === phoneRow)!.phoneNumber;
     // The AI score follows the outcome: a refusal never rates as a great call.
     const SCORE_BASE: Record<string, number> = { APPOINTMENT_SET: 78, INTERESTED: 70, GOOD_NUMBER: 55, CALLBACK: 45, NOT_INTERESTED: 18 };
     const score = answered ? (SCORE_BASE[disposition] ?? 50) + ((i * 37) % 18) : null;
+    // Every fourth call is builder outreach, logged on a buyer instead of a seller.
+    const buyer = i % 4 === 3 ? buyers[(i / 4) % buyers.length | 0] : null;
     agencyCalls.push({
       id: demoId(8, 3 + i),
-      name: `Outbound call to ${p.name}`,
+      name: `Outbound call to ${buyer ? buyer.name : p.ownerName}`,
       direction: i % 11 === 5 ? "INBOUND" : "OUTBOUND",
       status: answered ? "COMPLETED" : disposition === "BAD_NUMBER" ? "FAILED" : "NO_ANSWER",
       disposition,
       fromNumber: from,
-      toNumber: p.phone,
+      toNumber: buyer ? buyer.phone : p.phone,
       startedAt: t(ago),
       endedAt: t(ago - duration * 1000),
       durationSeconds: duration,
@@ -341,13 +337,13 @@ export function buildDemoRecords(now: Date = new Date()): DemoRecords {
       aiSummary: SUMMARIES[disposition] ?? null,
       aiSentiment: answered ? (disposition === "NOT_INTERESTED" ? "NEGATIVE" : disposition === "CALLBACK" ? "NEUTRAL" : "POSITIVE") : null,
       aiScore: score,
-      aiKeyPoints: answered ? JSON.stringify(["Reached the business during opening hours.", SUMMARIES[disposition] ?? "Conversation logged."]) : null,
+      aiKeyPoints: answered ? JSON.stringify(["Reached the owner during business hours.", SUMMARIES[disposition] ?? "Conversation logged."]) : null,
       aiScores: answered ? JSON.stringify({ conversion: 2 + (i % 4), politeness: 4 + (i % 2), questioning: 2 + (i % 3), engagement: 3 + (i % 3), sentiment: 2 + (i % 4) }) : null,
       aiConfidence: answered ? 0.8 : null,
       aiModel: answered ? "gpt-4o-mini" : null,
       aiAnalyzedAt: answered ? t(ago - 5 * MINUTE) : null,
-      agencyPhoneId: phone,
-      agencyProspectId: p.id,
+      agencyPhoneId: phoneRow,
+      ...(buyer ? { buyerId: buyer.id } : { landOpportunityId: p.id }),
       createdByMemberId: m.id,
       createdBy: actor(m),
       createdAt: t(ago),
@@ -356,10 +352,10 @@ export function buildDemoRecords(now: Date = new Date()): DemoRecords {
   }
 
   const agencyCallCampaigns = [
-    { id: demoId(9, 1), name: "Austin tint shops - morning block", status: "ACTIVE", contactIds: JSON.stringify(agencyProspects.filter((p) => p.region === "TX").slice(0, 9).map((p) => p.id)), createdByMemberId: alex.id, ownerName: alex.name, createdAt: t(1 * DAY) },
-    { id: demoId(9, 2), name: "Denver detailers", status: "ACTIVE", contactIds: JSON.stringify(agencyProspects.filter((p) => p.region === "CO").map((p) => p.id)), createdByMemberId: sam.id, ownerName: sam.name, createdAt: t(3 * DAY) },
-    { id: demoId(9, 3), name: "Nursery intro calls", status: "COMPLETED", contactIds: JSON.stringify(agencyProspects.filter((p) => p.region === "OR" || p.region === "WA").map((p) => p.id)), createdByMemberId: jordan.id, ownerName: jordan.name, createdAt: t(9 * DAY) },
+    { id: demoId(9, 1), name: "Travis County - morning block", status: "ACTIVE", contactIds: JSON.stringify(sellers.slice(0, 9).map((p) => p.id)), createdByMemberId: alex.id, ownerName: alex.name, createdAt: t(1 * DAY) },
+    { id: demoId(9, 2), name: "Hays County sellers", status: "ACTIVE", contactIds: JSON.stringify(sellers.filter((p) => p.county === "Hays").map((p) => p.id)), createdByMemberId: sam.id, ownerName: sam.name, createdAt: t(3 * DAY) },
+    { id: demoId(9, 3), name: "Builder buybox intros", status: "COMPLETED", contactIds: JSON.stringify(buyers.map((b) => b.id)), createdByMemberId: jordan.id, ownerName: jordan.name, createdAt: t(9 * DAY) },
   ];
 
-  return { members: DEMO_MEMBERS, agencyCampaigns, agencyScripts, agencyPhones, agencyProspects, agencyLeads, agencyPeople, agencyCalls, agencyCallCampaigns };
+  return { members: DEMO_MEMBERS, agencyCampaigns, agencyScripts, agencyPhones, sellers, buyers, agencyCalls, agencyCallCampaigns };
 }

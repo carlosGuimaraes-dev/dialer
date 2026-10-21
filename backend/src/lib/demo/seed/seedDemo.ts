@@ -21,15 +21,18 @@ const ORDER: (keyof Omit<DemoRecords, "members">)[] = [
   "agencyCampaigns",
   "agencyScripts",
   "agencyPhones",
-  "agencyProspects",
-  "agencyPeople",
-  "agencyLeads",
+  "sellers",
+  "buyers",
   "agencyCalls",
   "agencyCallCampaigns",
 ];
 
-/** The demo key -> the Twenty object's plural name (dial lists are `callCampaigns`). */
-const PLURAL: Record<string, string> = { agencyCallCampaigns: "callCampaigns" };
+/** The demo key -> the Twenty object's plural name (the demo names are the dialer's own). */
+const PLURAL: Record<string, string> = {
+  sellers: "landOpportunities",
+  buyers: "buyers",
+  agencyCallCampaigns: "callCampaigns",
+};
 
 /**
  * The fields a record may send: the manifest's fields, each relation's

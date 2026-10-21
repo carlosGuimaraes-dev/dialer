@@ -129,6 +129,15 @@ export function WebsitePanel({ prospectId, prospectPhone, prospectCountry }: { p
   });
 
   if (isLoading) return <PanelSkeleton />;
+  if (status && status.applicable === false) {
+    return (
+      <div className="p-3">
+        <Notice tone="neutral" title="No offer site in this workspace">
+          {status.reason ?? "The page we send is only configured for agency prospects."}
+        </Notice>
+      </div>
+    );
+  }
   if (error || !status) {
     return (
       <div className="p-3">

@@ -6,11 +6,10 @@
  * what the real backend would send. Used only by captureScreenshots.ts.
  */
 import { buildDemoRecords, DEMO_USER, type DemoRecords } from "../../backend/src/lib/demo/records/index.js";
-import { mapProspectDetail, mapProspectListItem } from "../../backend/src/routes/prospects/helpers/mapProspect.js";
-import { mapLeadToFrontend } from "../../backend/src/routes/leads/helpers/mapLead.js";
+import { mapOpportunityDetail, mapOpportunityListItem } from "../../backend/src/lib/wholesale/landOpportunity/map.js";
+import { mapBuyerListItem } from "../../backend/src/lib/wholesale/buyer/map.js";
 import { mapCall } from "../../backend/src/routes/calls/helpers/mapCall.js";
 import { mapPhone } from "../../backend/src/routes/twenty/phones/helpers/mapPhone.js";
-import { mapPerson } from "../../backend/src/routes/people/helpers.js";
 import { mapCampaign as mapCallCampaign } from "../../backend/src/routes/callCampaigns/helpers.js";
 import { mapScript } from "../../backend/src/routes/scripts/helpers/mapScript.js";
 import { mapCampaign } from "../../backend/src/routes/campaigns/helpers/mapCampaign.js";
@@ -22,7 +21,7 @@ export interface FixtureResponse {
 
 /** Select options as the Twenty metadata API lists them (schema, not data). */
 const OPTIONS: Record<string, Record<string, [string, string, string][]>> = {
-  agencyProspects: {
+  landOpportunities: {
     coldCallStatus: [["NEW", "New", "gray"], ["CONTACTED", "Contacted", "blue"], ["INTERESTED", "Interested", "green"], ["NOT_INTERESTED", "Not Interested", "red"], ["CALLBACK", "Callback", "yellow"], ["CONVERTED", "Converted", "purple"], ["DO_NOT_CONTACT", "Do Not Contact", "black"]],
     outboundLabel: [["NEEDS_ENRICHMENT", "Needs Enrichment", "gray"], ["NEEDS_VIDEO", "Needs Video", "gray"], ["READY_FOR_SMS", "Ready For SMS", "turquoise"], ["SMS_IN_PROGRESS", "SMS In Progress", "blue"], ["FOLLOW_UP_DUE", "Follow Up Due", "yellow"], ["HUMAN_REVIEW", "Human Review", "purple"], ["POSITIVE_REPLY", "Positive Reply", "green"], ["NEGATIVE_REPLY", "Negative Reply", "red"], ["DO_NOT_CONTACT", "Do Not Contact", "red"], ["DELIVERY_FAILED", "Delivery Failed", "red"]],
     outboundState: [["NEW", "New", "gray"], ["ENRICHED", "Enriched", "blue"], ["VIDEO_READY", "Video Ready", "blue"], ["QUEUED", "Queued", "turquoise"], ["SENDING", "Sending", "blue"], ["AWAITING_DELIVERY", "Awaiting Delivery", "blue"], ["AWAITING_REPLY", "Awaiting Reply", "blue"], ["REPLIED", "Replied", "purple"], ["QUALIFIED", "Qualified", "green"], ["BOOKED", "Booked", "green"], ["COMPLETED", "Completed", "green"], ["PAUSED", "Paused", "yellow"], ["OPTED_OUT", "Opted Out", "red"], ["FAILED", "Failed", "red"]],
@@ -40,7 +39,7 @@ const OPTIONS: Record<string, Record<string, [string, string, string][]>> = {
     meetingStatus: [["NONE", "None", "gray"], ["SCHEDULED", "Scheduled", "blue"], ["HELD", "Held", "green"], ["CANCELLED", "Cancelled", "red"], ["NO_SHOW", "No Show", "orange"]],
   },
 };
-OPTIONS.agencyLeads = { coldCallStatus: OPTIONS.agencyProspects.coldCallStatus };
+OPTIONS.buyers = { coldCallStatus: OPTIONS.landOpportunities.coldCallStatus };
 
 function meta(object: string) {
   const fields = OPTIONS[object] ?? {};
@@ -55,16 +54,16 @@ function meta(object: string) {
 
 function lastCallOf(db: DemoRecords, id: string) {
   const c = db.agencyCalls
-    .filter((x) => x.agencyProspectId === id || x.agencyLeadId === id)
+    .filter((x) => x.landOpportunityId === id || x.buyerId === id)
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0];
   return c ? { id: c.id, status: c.disposition || c.status, at: c.startedAt } : null;
 }
 
 function contactRows(db: DemoRecords) {
-  const prospects = [...db.agencyProspects]
+  const prospects = [...db.sellers]
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .map((p) => ({ ...mapProspectListItem(p), type: "prospect", lastCall: lastCallOf(db, p.id) }));
-  const leads = db.agencyLeads.map((l) => ({ ...mapLeadToFrontend(l), type: "lead", lastCall: lastCallOf(db, l.id) }));
+    .map((p) => ({ ...mapOpportunityListItem(p), type: "prospect", lastCall: lastCallOf(db, p.id) }));
+  const leads = db.buyers.map((l) => ({ ...mapBuyerListItem(l, { phone: l.phone }), type: "lead", lastCall: lastCallOf(db, l.id) }));
   return { prospects, leads };
 }
 
@@ -86,20 +85,20 @@ function activity(db: DemoRecords, targets: string | null) {
   };
   const events: any[] = [];
   for (const c of db.agencyCalls.slice(0, 30)) {
-    const p = db.agencyProspects.find((x) => x.id === c.agencyProspectId);
+    const p = db.sellers.find((x) => x.id === c.landOpportunityId);
     events.push({ id: `${c.id}-c`, happensAt: c.createdAt, action: "created", object: "call", recordId: c.id, recordName: c.name, actor: by(c.createdByMemberId), changes: [] });
     if (c.disposition) events.push({ id: `${c.id}-d`, happensAt: c.updatedAt, action: "updated", object: "call", recordId: c.id, recordName: c.name, actor: by(c.createdByMemberId), changes: [{ field: "disposition", before: null, after: c.disposition }] });
     if (p && c.disposition && ["INTERESTED", "CALLBACK", "NOT_INTERESTED", "APPOINTMENT_SET"].includes(c.disposition)) {
       events.push({ id: `${c.id}-p`, happensAt: c.updatedAt, action: "updated", object: "prospect", recordId: p.id, recordName: p.name, actor: by(c.createdByMemberId), changes: [{ field: "coldCallStatus", before: "CONTACTED", after: p.coldCallStatus }] });
     }
   }
-  const featured = db.agencyProspects[0];
+  const featured = db.sellers[0];
   events.push(
     { id: "f-1", happensAt: featured.createdAt, action: "created", object: "prospect", recordId: featured.id, recordName: featured.name, actor: by(featured.createdByMemberId), changes: [] },
     { id: "f-2", happensAt: db.agencyCalls[0].updatedAt, action: "updated", object: "prospect", recordId: featured.id, recordName: featured.name, actor: by(db.members[0].id), changes: [{ field: "outboundLabel", before: "NEEDS_VIDEO", after: "READY_FOR_SMS" }] },
-    { id: "f-3", happensAt: db.agencyPeople[0].createdAt, action: "updated", object: "prospect", recordId: featured.id, recordName: featured.name, actor: by(db.members[0].id), changes: [{ field: "videoStatus", before: "QUEUED", after: "ATTACHED" }] },
+    { id: "f-3", happensAt: featured.updatedAt, action: "updated", object: "prospect", recordId: featured.id, recordName: featured.name, actor: by(db.members[0].id), changes: [{ field: "sellerStage", before: "CONTACTED", after: "INTERESTED" }] },
   );
-  for (const l of db.agencyLeads) events.push({ id: `${l.id}-c`, happensAt: l.createdAt, action: "created", object: "lead", recordId: l.id, recordName: l.name, actor: by(l.createdById), changes: [] });
+  for (const l of db.buyers) events.push({ id: `${l.id}-c`, happensAt: l.createdAt, action: "created", object: "lead", recordId: l.id, recordName: l.name, actor: by(db.members[0].id), changes: [] });
   for (const cc of db.agencyCallCampaigns) events.push({ id: `${cc.id}-c`, happensAt: cc.createdAt, action: "created", object: "callCampaign", recordId: cc.id, recordName: cc.name, actor: by(cc.createdByMemberId), changes: [] });
   events.push({ id: "ph-1", happensAt: db.agencyPhones[2].updatedAt, action: "updated", object: "phone", recordId: db.agencyPhones[2].id, recordName: db.agencyPhones[2].name, actor: by(db.members[3].id), changes: [{ field: "state", before: "ACTIVE", after: "PAUSED" }] });
 
@@ -112,44 +111,15 @@ function activity(db: DemoRecords, targets: string | null) {
   return { activities: list, members, totalCount: list.length, truncated: false };
 }
 
-function websiteStatus(db: DemoRecords, id: string, pageUrl: string) {
-  const p = db.agencyProspects.find((x) => x.id === id);
+/**
+ * The offer site belongs to the agency funnel; the wholesale workspace has
+ * none, so the panel gets the same "not applicable" answer the real route
+ * gives instead of a half-filled page.
+ */
+function websiteStatus(db: DemoRecords, id: string, _pageUrl: string) {
+  const p = db.sellers.find((x) => x.id === id);
   if (!p) return null;
-  const industryKey = p.label.toLowerCase().replace(/_/g, "-");
-  return {
-    page: { url: `${pageUrl}?prospect=${p.slug}`, previewAllowed: true, previewBlockedReason: null },
-    prospect: {
-      id: p.id,
-      slug: p.slug,
-      niche: p.niche,
-      label: p.label,
-      labelValue: p.label,
-      website: p.website,
-      phone: p.phone,
-      phoneE164: p.phone,
-      country: p.country,
-      city: p.city,
-      region: p.region,
-      videoStatus: p.videoStatus,
-      videoSource: "demo",
-      videoUrl: { primaryLinkUrl: `https://video.example/${p.slug}`, primaryLinkLabel: "Walkthrough video" },
-      outboundState: p.outboundState,
-      outboundLabel: p.outboundLabel,
-      smsMetadata: null,
-      whatsappStatus: "VALIDATED",
-    },
-    offer: { id: `offer-${industryKey}`, title: `${p.niche} booking page`, heroH1: `${p.name}, booked online`, status: "ACTIVE", ctaType: "BOOKING", videoMode: "PROSPECT", industryId: p.label, videoUrl: null },
-    urls: {
-      industryId: p.label,
-      industryKey,
-      pack: industryKey,
-      slug: p.slug,
-      offerDisplayUrl: `offer.example/${industryKey}/${p.slug}`,
-      funnelSrc: `${pageUrl}?prospect=${p.slug}`,
-      templateUrl: `${pageUrl}?prospect=${p.slug}`,
-      templateAvailable: true,
-    },
-  };
+  return { applicable: false, reason: "The offer site is only configured for agency prospects." };
 }
 
 /**
@@ -169,8 +139,8 @@ export function respond(method: string, url: URL, pageUrl: string): FixtureRespo
   if (method !== "GET") return ok({ ok: true, success: true });
   if (path === "/api/messages") {
     const id = url.searchParams.get("contactId");
-    const contact = db.agencyProspects.find((p) => p.id === id);
-    if (!contact || contact.id !== db.agencyProspects[0].id) return ok({ numbers: contact ? [contact.phone] : [], messages: [] });
+    const contact = db.sellers.find((p) => p.id === id);
+    if (!contact || contact.id !== db.sellers[0].id) return ok({ numbers: contact ? [contact.phone] : [], messages: [] });
     const at = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000).toISOString();
     const ours = (body: string, minutesAgo: number, status: string) => ({ id: `t${minutesAgo}`, direction: "OUTBOUND", body, fromNumber: "+15125550100", toNumber: contact.phone, status, at: at(minutesAgo), author: "Alex Rivera" });
     const theirs = (body: string, minutesAgo: number) => ({ id: `t${minutesAgo}`, direction: "INBOUND", body, fromNumber: contact.phone, toNumber: "+15125550100", status: "received", at: at(minutesAgo), author: null });
@@ -202,15 +172,22 @@ export function respond(method: string, url: URL, pageUrl: string): FixtureRespo
     return ok({ offset, rows: all.slice(offset, offset + limit), totalCount: all.length, counts: { prospect: types.includes("prospect") ? prospects.length : 0, lead: types.includes("lead") ? leads.length : 0 } });
   }
   if (path === "/api/prospects/facets") {
-    const raw = db.agencyProspects;
+    const raw = db.sellers;
     return ok({
-      total: raw.length + db.agencyLeads.length,
-      type: { prospect: raw.length, lead: db.agencyLeads.length },
+      total: raw.length + db.buyers.length,
+      type: { prospect: raw.length, lead: db.buyers.length, person: 0 },
       status: count(raw, (p) => p.coldCallStatus),
-      country: count(raw, (p) => p.country),
-      industry: count(raw, (p) => p.niche),
+      country: {},
+      industry: count(raw, (p) => p.propertyType),
       campaign: count(raw, (p) => p.campaignIdId),
       creator: raw.length,
+      state: count(raw, (p) => p.state),
+      city: count(raw, (p) => p.city),
+      lastCall: {},
+      assignedTo: {},
+      leadSource: count(raw, (p) => p.leadSource),
+      offer: {},
+      names: { member: {}, campaign: {} },
     });
   }
   if (path === "/api/prospects/lookup") {
@@ -224,14 +201,14 @@ export function respond(method: string, url: URL, pageUrl: string): FixtureRespo
   }
   m = /^\/api\/prospects\/([^/]+)$/.exec(path);
   if (m) {
-    const p = db.agencyProspects.find((x) => x.id === m![1]);
-    return p ? ok(mapProspectDetail(p)) : { status: 404, body: { error: "Prospect not found" } };
+    const p = db.sellers.find((x) => x.id === m![1]);
+    return p ? ok(mapOpportunityDetail(p)) : { status: 404, body: { error: "Prospect not found" } };
   }
-  if (path === "/api/leads") return ok(db.agencyLeads.map((l) => mapLeadToFrontend(l)));
+  if (path === "/api/leads") return ok(db.buyers.map((l) => ({ ...mapBuyerListItem(l, { phone: l.phone }), type: "lead" })));
   m = /^\/api\/leads\/([^/]+)$/.exec(path);
   if (m) {
-    const l = db.agencyLeads.find((x) => x.id === m![1]);
-    return l ? ok(mapLeadToFrontend(l)) : { status: 404, body: { error: "Lead not found" } };
+    const l = db.buyers.find((x) => x.id === m![1]);
+    return l ? ok(mapBuyerListItem(l, { phone: l.phone })) : { status: 404, body: { error: "Lead not found" } };
   }
   if (path === "/api/campaigns") return ok(db.agencyCampaigns.map(mapCampaign));
   if (path === "/api/scripts") return ok(db.agencyScripts.map(mapScript));
@@ -241,8 +218,8 @@ export function respond(method: string, url: URL, pageUrl: string): FixtureRespo
   m = /^\/api\/twenty\/meta\/([^/]+)$/.exec(path);
   if (m) return ok(meta(m[1]));
   if (path === "/api/people") {
-    const id = q.get("prospectId") || q.get("leadId");
-    return ok(db.agencyPeople.filter((p) => p.prospectId === id).map(mapPerson));
+    // The wholesale workspace keeps the owner on the seller record, not in person rows.
+    return ok([]);
   }
   const calls = [...db.agencyCalls].sort((a, b) => b.startedAt.localeCompare(a.startedAt)).map(mapCall);
   if (path === "/api/calls") return ok(calls);

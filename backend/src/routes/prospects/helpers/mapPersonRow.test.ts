@@ -26,9 +26,11 @@ test("people are opt-in: only the Type filter brings them in", () => {
   assert.deepEqual(contactTypes("prospect|person"), { prospects: true, leads: false, people: true });
 });
 
-test("company filters reach people through their prospect", () => {
+test("company filters reach people through their seller record", () => {
   assert.equal(hasCompanyFilter({ assignedTo: "5ecd97b9-5949-4cfd-a2f4-a5f88f9c1ec0" }), true);
   assert.equal(hasCompanyFilter({ q: "ana", name: "ana" }), false);
-  assert.deepEqual(personGqlQuery({}, ["c1", "c2"]).filter, { prospectId: { in: ["c1", "c2"] } });
+  // A relation filter nests the compared column: Twenty rejects `ownedLandOpportunitiesId`.
+  assert.deepEqual(personGqlQuery({}, ["c1", "c2"], "ownedLandOpportunities").filter, { ownedLandOpportunities: { id: { in: ["c1", "c2"] } } });
+  assert.deepEqual(personGqlQuery({}, ["c1"], "prospectId").filter, { prospectId: { id: { in: ["c1"] } } });
   assert.deepEqual(personGqlQuery({ q: "logistics" }).filter, { or: [{ name: { ilike: "%logistics%" } }, { jobTitle: { ilike: "%logistics%" } }] });
 });

@@ -15,6 +15,7 @@ import { createLogger } from "../../lib/logger/index.js";
 import { resolveActor } from "../../lib/twenty/actor/index.js";
 import { listWorkspaceMembers } from "../../lib/twenty/workspaceMember/index.js";
 import { OBJECTS, contactRelationId } from "../../lib/wholesale/objects.js";
+import { contactFields } from "../../lib/wholesale/fields.js";
 import {
   mapOpportunityListItem,
   mapOpportunityDetail,
@@ -22,7 +23,7 @@ import {
   mapOpportunityCreateResult,
   frontendToOpportunityPayload,
 } from "../../lib/wholesale/landOpportunity/map.js";
-import { mapBuyerListItem } from "../../lib/wholesale/buyer/map.js";
+import { mapBuyerListItem, buyerContactOf } from "../../lib/wholesale/buyer/map.js";
 import type { AgencyProspect, AgencyCampaign, IndustryRouting } from "./types.js";
 import {
   selectValue,
@@ -48,13 +49,34 @@ const CAMPAIGN_OBJECT = OBJECTS.campaigns as string;
 const PROSPECT_RELATION_ID = contactRelationId("prospects");
 const LEAD_RELATION_ID = contactRelationId("leads");
 
+/** Which columns each contact object actually has (filters and sorts depend on it). */
+const PROSPECT_FIELDS = contactFields(PROSPECT_OBJECT);
+const LEAD_FIELDS = contactFields(LEAD_OBJECT);
+
+/**
+ * The person field that points back at its company: agencyPerson.prospectId,
+ * or person.ownedLandOpportunities in the wholesale workspace (one seller has
+ * many people). Drives the People list and its company filter.
+ */
+const PERSON_OWNER_FIELD = PROSPECT_OBJECT === "landOpportunities" ? "ownedLandOpportunities" : "prospectId";
+
+/** A person's company id, whatever object backs the company. */
+const personCompanyId = (r: any): string | null => {
+  const owner = r?.[PERSON_OWNER_FIELD];
+  if (typeof owner === "string") return owner;
+  if (Array.isArray(owner)) return owner[0]?.id ?? null;
+  return null;
+};
+
 /** Row -> Contacts table entry, whatever object backs "prospect" today. */
 const mapProspectRow = (r: any) =>
   PROSPECT_OBJECT === "agencyProspects" ? mapProspectListItem(r) : mapOpportunityListItem(r);
 
 /** Row -> Contacts table entry for "lead" (buyers in the wholesale workspace). */
-const mapLeadRow = (r: any) =>
-  LEAD_OBJECT === "agencyLeads" ? mapLeadToFrontend(r) : mapBuyerListItem(r);
+const mapLeadRow = (r: any) => {
+  if (LEAD_OBJECT === "agencyLeads") return mapLeadToFrontend(r);
+  return mapBuyerListItem(r, buyerContactOf(r));
+};
 
 /** Detail/patch views follow the same object switch. */
 const mapProspectDetailView = (r: any) =>
@@ -136,7 +158,10 @@ router.get("/page", async (req, res) => {
     const client: any = twentyGraphqlClient();
 
     const PROSPECT_NODE = { __scalar: true, phoneNumber: { __scalar: true }, primaryPhone: { __scalar: true }, videoUrl: { __scalar: true } };
-    const LEAD_NODE = { __scalar: true, email: { __scalar: true }, phone: { __scalar: true } };
+    // A buyer keeps its phone and email on its point of contact, not on the row.
+    const LEAD_NODE = LEAD_OBJECT === "buyers"
+      ? { __scalar: true, pointOfContact: { __scalar: true, phones: { __scalar: true }, emails: { __scalar: true } } }
+      : { __scalar: true, email: { __scalar: true }, phone: { __scalar: true } };
     // Last call filter: the contacts whose newest call ended that way, or
     // (Never called) every contact without a call.
     let scope: IdScope | undefined;
@@ -150,8 +175,8 @@ router.get("/page", async (req, res) => {
         scope = { in: ids };
       }
     }
-    const pq = types.prospects ? prospectGqlQuery(params, scope) : null;
-    const lq = types.leads ? leadGqlQuery(params, scope) : null;
+    const pq = types.prospects ? prospectGqlQuery(params, scope, PROSPECT_OBJECT) : null;
+    const lq = types.leads ? leadGqlQuery(params, scope, LEAD_OBJECT) : null;
 
     // People (decision makers): company filters (assignee, country, status, last call...) match through the
     // person's prospect, so first collect the prospects that pass them.
@@ -159,7 +184,7 @@ router.get("/page", async (req, res) => {
     if (types.people) {
       let prospectIds: string[] | undefined;
       if (hasCompanyFilter(params) || scope) {
-        const companyQ = prospectGqlQuery(params, scope);
+        const companyQ = prospectGqlQuery(params, scope, PROSPECT_OBJECT);
         prospectIds = [];
         let after: string | undefined;
         for (let page = 0; page < 25; page++) {
@@ -175,9 +200,9 @@ router.get("/page", async (req, res) => {
           after = r[PROSPECT_OBJECT].pageInfo.endCursor;
         }
       }
-      peq = prospectIds && prospectIds.length === 0 ? null : personGqlQuery(params, prospectIds);
+      peq = prospectIds && prospectIds.length === 0 ? null : personGqlQuery(params, prospectIds, PERSON_OWNER_FIELD);
     }
-    const PERSON_NODE = { __scalar: true, phones: { __scalar: true }, emails: { __scalar: true } };
+    const PERSON_NODE = { __scalar: true, phones: { __scalar: true }, emails: { __scalar: true }, ...(PERSON_OWNER_FIELD === "prospectId" ? {} : { [PERSON_OWNER_FIELD]: { __scalar: true } }) };
 
     const fetchSlice = async (object: string, q: { filter?: unknown; orderBy: unknown }, node: object, first: number, skip: number) => {
       const r: any = await client.query({
@@ -204,7 +229,16 @@ router.get("/page", async (req, res) => {
     const sources = [
       pq && pTotal > 0 ? { object: PROSPECT_OBJECT, q: pq, node: PROSPECT_NODE, total: pTotal, type: "prospect", map: mapProspectRow } : null,
       lq && lTotal > 0 ? { object: LEAD_OBJECT, q: lq, node: LEAD_NODE, total: lTotal, type: "lead", map: mapLeadRow } : null,
-      peq && peTotal > 0 ? { object: PERSON_OBJECT, q: peq, node: PERSON_NODE, total: peTotal, type: "person", map: mapPersonListItem } : null,
+      peq && peTotal > 0
+        ? {
+            object: PERSON_OBJECT,
+            q: peq,
+            node: PERSON_NODE,
+            total: peTotal,
+            type: "person",
+            map: (r: any) => ({ ...mapPersonListItem(r), prospectId: personCompanyId(r) }),
+          }
+        : null,
     ].filter((x): x is NonNullable<typeof x> => !!x);
     if (params.sort === "contact_type" && params.dir === "desc") sources.reverse();
 
@@ -299,18 +333,20 @@ router.get("/facets", async (_req, res) => {
       return out;
     };
     const none = () => ({}) as Record<string, number>;
+    // Group on the fields this object has (landOpportunity has no country, no
+    // campaign, no member assignee): a missing column counts as "no counts".
+    const maybe = (field: string | null) => (field ? group(field) : Promise.resolve({}) as Promise<Record<string, number>>);
     const [status, country, industry, campaign, creators, state, city, assignedTo, leadSource, offer, memberNames, campaignNames, last] = await Promise.all([
-      group("coldCallStatus"),
-      group("country"),
-      group("niche"),
-      group("campaignIdId"),
+      group(PROSPECT_FIELDS.status),
+      maybe(PROSPECT_FIELDS.country),
+      maybe(PROSPECT_FIELDS.industry),
+      maybe(PROSPECT_FIELDS.campaign),
       group("createdByMemberId").catch(none),
-      group("region").catch(none),
-      group("city").catch(none),
-      // Workspaces without these fields (bun run twenty:schema adds them) just get no counts.
-      group("assignedToId").catch(none),
-      group("leadSource").catch(none),
-      group("offer").catch(none),
+      maybe(PROSPECT_FIELDS.state),
+      maybe(PROSPECT_FIELDS.city),
+      maybe(PROSPECT_FIELDS.assignedTo),
+      maybe(PROSPECT_FIELDS.leadSource),
+      maybe(PROSPECT_FIELDS.offer),
       // Names for the id-valued menus (Assigned to, Campaign).
       listWorkspaceMembers()
         .then((ms) => Object.fromEntries(ms.map((m) => [m.id, [m.firstName, m.lastName].filter(Boolean).join(" ").trim() || m.userEmail || m.id])))
@@ -325,7 +361,10 @@ router.get("/facets", async (_req, res) => {
       }),
     ]);
     const creator = Object.entries(creators).reduce((sum, [k, n]) => (k === "__blank" ? sum : sum + n), 0);
-    const total = Object.values(country).reduce((a, b) => a + b, 0);
+    // The country grouping is the prospect count when the object has it; else ask Twenty directly.
+    const total = Object.keys(country).length
+      ? Object.values(country).reduce((a, b) => a + b, 0)
+      : Number(((await fetchTwenty(PROSPECT_OBJECT, { limit: 1 })) as any)?.totalCount ?? 0);
     const leadsBody: any = await fetchTwenty(LEAD_OBJECT, { limit: 1 });
     // People are opt-in in the table (Type -> People), so they count in the Type menu but not in the total.
     const peopleBody: any = await fetchTwenty(PERSON_OBJECT, { limit: 1 }).catch(() => null);
@@ -410,44 +449,61 @@ router.post("/", async (req: AuthRequest, res) => {
 
     log.info(`Creating prospect: ${fullName}`);
 
-    // agencyProspect is shared with the offer funnel, whose NOT NULL contract
-    // (website, geo, niche, label, slug) the manual-entry form cannot always
-    // satisfy. Normalize rather than relax the object, so the funnel's
-    // workflows keep working.
-    const normalized = normalizeRequiredProspectFields({
-      name: fullName,
-      phone,
-      email,
-      website,
-      fullAddress,
-      city,
-      region: state,
-      source,
-      now: Date.now(),
-    });
-    if (normalized.missing.length > 0) {
-      res.status(400).json({
-        error:
-          normalized.missing.includes("phone")
-            ? "A prospect needs a phone number - there is nothing to call without one."
-            : "A prospect needs a city - the campaign routes on geography.",
-        missing: normalized.missing,
+    let payload: Record<string, unknown>;
+    if (PROSPECT_OBJECT === "agencyProspects") {
+      // agencyProspect is shared with the offer funnel, whose NOT NULL contract
+      // (website, geo, niche, label, slug) the manual-entry form cannot always
+      // satisfy. Normalize rather than relax the object, so the funnel's
+      // workflows keep working.
+      const normalized = normalizeRequiredProspectFields({
+        name: fullName,
+        phone,
+        email,
+        website,
+        fullAddress,
+        city,
+        region: state,
+        source,
+        now: Date.now(),
       });
-      return;
+      if (normalized.missing.length > 0) {
+        res.status(400).json({
+          error:
+            normalized.missing.includes("phone")
+              ? "A prospect needs a phone number - there is nothing to call without one."
+              : "A prospect needs a city - the campaign routes on geography.",
+          missing: normalized.missing,
+        });
+        return;
+      }
+      payload = {
+        ...normalized.payload,
+        rating: 0,
+        reviewCount: 0,
+        externalId: undefined,
+        outboundState: tags?.[0],
+        coldCallStatus,
+        ...(notes ? { notes } : {}),
+        ...(req.workspaceMemberId ? { createdByMemberId: req.workspaceMemberId } : {}),
+      };
+    } else {
+      // The wholesale seller record is the parcel: a phone is the only thing
+      // a call needs, and the address line is what names the record when the
+      // form leaves the name empty.
+      if (!String(phone ?? "").trim()) {
+        res.status(400).json({
+          error: "A prospect needs a phone number - there is nothing to call without one.",
+          missing: ["phone"],
+        });
+        return;
+      }
+      payload = {
+        ...frontendToOpportunityPayload({ first_name, last_name, phone, email, address, city, state, zip, notes }),
+        name: fullName || address || String(phone).trim(),
+        coldCallStatus,
+        ...(source ? { leadSource: source } : {}),
+      };
     }
-
-    const payload: Record<string, unknown> = PROSPECT_OBJECT === "agencyProspects"
-      ? {
-          ...normalized.payload,
-          rating: 0,
-          reviewCount: 0,
-          externalId: undefined,
-          outboundState: tags?.[0],
-          coldCallStatus,
-          ...(notes ? { notes } : {}),
-          ...(req.workspaceMemberId ? { createdByMemberId: req.workspaceMemberId } : {}),
-        }
-      : frontendToOpportunityPayload({ first_name, last_name, phone, email, address, city, state, zip, status });
 
     const result = await createTwenty<any>(PROSPECT_OBJECT, payload, await resolveActor(req));
     const prospect = result.data || result;
@@ -503,33 +559,39 @@ router.patch("/:id", async (req: AuthRequest, res) => {
       campaign_id,
     } = req.body;
 
-    const payload: any = {};
+    // Each object takes its own column names: landOpportunity has no website,
+    // slug or campaign, and the wholesale form writes address parts, not one
+    // composed address line.
+    const wholesale = PROSPECT_OBJECT !== "agencyProspects";
+    const payload: any = wholesale
+      ? frontendToOpportunityPayload({ first_name, last_name, phone, email, address, city, state, zip, notes, status })
+      : {};
 
-    if (first_name !== undefined || last_name !== undefined) {
-      const fullName = [first_name, last_name].filter(Boolean).join(" ").trim();
-      if (fullName) payload.name = fullName;
-    }
-
-    if (phone !== undefined) payload.phone = phone;
-    if (email !== undefined) payload.email = email;
-    if (website !== undefined) payload.website = website;
-    if (address !== undefined || city !== undefined || state !== undefined || zip !== undefined) {
-      const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
-      if (fullAddress) payload.fullAddress = fullAddress;
-    }
-    if (city !== undefined) payload.city = city;
-    if (state !== undefined) payload.region = state;
-    if (source !== undefined) payload.niche = source;
-    if (notes !== undefined) payload.notes = notes || null;
-    if (tags?.[0] !== undefined) payload.outboundState = tags[0];
-
-    // Handle campaign relation
-    if (campaign_id !== undefined) {
-      payload.campaignIdId = campaign_id || null;
-    }
-
-    if (req.body.assignedToId !== undefined) {
-      payload.assignedToId = req.body.assignedToId || null;
+    if (wholesale) {
+      // frontendToOpportunityPayload already mapped status; the guard below
+      // rewrites it after checking the transition.
+      if (status !== undefined) delete payload.coldCallStatus;
+      if (source !== undefined) payload.leadSource = source || null;
+      if (email !== undefined) payload.email = email || null;
+    } else {
+      if (first_name !== undefined || last_name !== undefined) {
+        const fullName = [first_name, last_name].filter(Boolean).join(" ").trim();
+        if (fullName) payload.name = fullName;
+      }
+      if (phone !== undefined) payload.phone = phone;
+      if (email !== undefined) payload.email = email;
+      if (website !== undefined) payload.website = website;
+      if (address !== undefined || city !== undefined || state !== undefined || zip !== undefined) {
+        const fullAddress = [address, city, state, zip].filter(Boolean).join(", ");
+        if (fullAddress) payload.fullAddress = fullAddress;
+      }
+      if (city !== undefined) payload.city = city;
+      if (state !== undefined) payload.region = state;
+      if (source !== undefined) payload.niche = source;
+      if (notes !== undefined) payload.notes = notes || null;
+      if (tags?.[0] !== undefined) payload.outboundState = tags[0];
+      if (campaign_id !== undefined) payload.campaignIdId = campaign_id || null;
+      if (req.body.assignedToId !== undefined) payload.assignedToId = req.body.assignedToId || null;
     }
 
     // Status changes follow the contact pipeline (packages/shared
@@ -540,7 +602,7 @@ router.patch("/:id", async (req: AuthRequest, res) => {
         res.status(guard.status).json({ error: guard.reason, code: "INVALID_TRANSITION" });
         return;
       }
-      payload[PROSPECT_OBJECT === "agencyProspects" ? "coldCallStatus" : "opportunityStatus"] = guard.to;
+      payload.coldCallStatus = guard.to;
     }
 
     if (Object.keys(payload).length === 0) {
@@ -588,6 +650,13 @@ router.delete("/:id", async (req, res) => {
 router.get("/:id/website-status", async (req, res) => {
   try {
     const id = req.params.id as string;
+    if (PROSPECT_OBJECT !== "agencyProspects") {
+      // The offer site, the industry copy and the outreach labels belong to the
+      // agency funnel, which the wholesale workspace does not have: say so
+      // instead of serving a half-empty panel.
+      res.json({ applicable: false, reason: "The offer site is only configured for agency prospects." });
+      return;
+    }
     const prospect = await getTwenty<AgencyProspect>(PROSPECT_OBJECT, id);
 
     // Industry routing from the campaign row: linked campaign first, else the
@@ -647,6 +716,7 @@ router.get("/:id/website-status", async (req, res) => {
     const previewAllowed = framing ? frameAllowed(framing, origin) : false;
 
     res.json({
+      applicable: true,
       page: {
         url: pageUrl,
         previewAllowed,
@@ -766,6 +836,11 @@ router.post("/:id/website-sent", async (req: AuthRequest, res) => {
 router.post("/:id/ensure-offer", async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
+    if (PROSPECT_OBJECT !== "agencyProspects") {
+      // Industry copy belongs to the agency funnel; the wholesale workspace has none.
+      res.status(404).json({ error: "Industry not configured for prospect" });
+      return;
+    }
     const prospect = await getTwenty<AgencyProspect>(PROSPECT_OBJECT, id);
     const routing = await resolveIndustryRouting(prospect);
     if (!routing?.urlKey) {

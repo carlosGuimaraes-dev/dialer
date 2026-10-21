@@ -66,13 +66,13 @@ const client: SeedClient = {
 };
 
 if (!reset && !force) {
-  const res = await call("GET", "agencyProspects?limit=60");
-  if (!res.ok) await fail(res, "Could not read agencyProspects (run `bun run twenty:schema` first?)");
+  const res = await call("GET", "landOpportunities?limit=60");
+  if (!res.ok) await fail(res, "Could not read landOpportunities (run `bun run twenty:schema` first?)");
   const body: any = await res.json();
-  const rows: { id: string }[] = body?.data?.agencyProspects ?? [];
+  const rows: { id: string }[] = body?.data?.landOpportunities ?? [];
   const real = rows.filter((r) => !r.id.startsWith(DEMO_PREFIX)).length;
   if (real > 0) {
-    console.error(`${base} already has real prospects (${real} or more). The demo data is for a fresh workspace.`);
+    console.error(`${base} already has real sellers (${real} or more). The demo data is for a fresh workspace.`);
     console.error("Pass --force to add it anyway; `bun run twenty:seed -- --reset` removes it again.");
     process.exit(1);
   }

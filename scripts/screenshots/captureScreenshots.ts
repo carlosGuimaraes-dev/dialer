@@ -27,9 +27,9 @@ const PAGE_URL = `${ORIGIN}/__demo/offer.html`;
 const VIEWPORT = { width: 1440, height: 900 };
 
 const db = buildDemoRecords();
-const featured = db.agencyProspects[0];
+const featured = db.sellers[0];
 const featuredCall = db.agencyCalls[0];
-const lead = db.agencyLeads[1];
+const lead = db.buyers[1];
 
 /**
  * A JWT-shaped token for the demo member. The app reads its claims to restore
