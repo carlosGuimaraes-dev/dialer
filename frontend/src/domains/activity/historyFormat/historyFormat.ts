@@ -264,8 +264,8 @@ function addedNote(before: unknown, after: unknown): string | null {
 const RELATED: Partial<Record<AdminObject, { noun: string; created: string }>> = {
   call: { noun: "Call", created: "Call started" },
   message: { noun: "Text", created: "Text sent" },
-  prospect: { noun: "Prospect", created: "Prospect created" },
-  lead: { noun: "Lead", created: "Lead created" },
+  prospect: { noun: "Seller lot", created: "Seller lot created" },
+  lead: { noun: "Builder", created: "Builder created" },
 };
 
 /** Machine fields on a related call or text: the sentence would be noise. */

@@ -35,7 +35,7 @@ import { StateSelect } from "@/domains/ui/stateSelect";
 import { inputClass as INPUT } from "@/domains/ui/input";
 import { contactStatusMachine, toContactStatus, toLegacyStatus } from "@dialer/shared";
 import type { Contact } from "@/domains/contact/model";
-import { initials } from "@/domains/contact/model";
+import { initials, roleLabel } from "@/domains/contact/model";
 import { ContactPeople } from "@/domains/contact/people";
 import { usePeople } from "@/domains/contact/people";
 import { useContactFacets } from "@/domains/contact/list";
@@ -240,7 +240,7 @@ export function ContactSidebar({
         <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate("/contacts")}>
           Contacts
         </Button>
-        <Pill icon={contact.type === "lead" ? User : Users}>{contact.type === "lead" ? "Lead" : "Prospect"}</Pill>
+        <Pill icon={contact.type === "lead" ? User : Users}>{roleLabel(contact.type === "lead" ? "lead" : "prospect")}</Pill>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 space-y-3">

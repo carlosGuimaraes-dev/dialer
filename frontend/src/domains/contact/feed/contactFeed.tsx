@@ -36,7 +36,7 @@ import { useRecordHistory } from "@/domains/contact/history";
 import { resolveFeedBodyState } from "./feedState";
 import { Skeleton } from "@/domains/ui/skeleton";
 import type { Contact } from "@/domains/contact/model";
-import { initials } from "@/domains/contact/model";
+import { initials, roleLabel } from "@/domains/contact/model";
 import { useContactTexts, useSendText } from "@/domains/messaging/thread";
 import type { TextMessage } from "@/domains/api/client";
 import { useToast } from "@/domains/ui/toast";
@@ -100,7 +100,7 @@ export function ContactFeed({
       out.push({
         kind: "event",
         at: contact.createdAt,
-        row: { id: "created", at: contact.createdAt, kind: "created", field: null, label: `${contact.type === "lead" ? "Lead" : "Prospect"} created`, before: { kind: "blank" }, after: { kind: "blank" }, who: "Dialer", source: null },
+        row: { id: "created", at: contact.createdAt, kind: "created", field: null, label: `${roleLabel(contact.type === "lead" ? "lead" : "prospect")} created`, before: { kind: "blank" }, after: { kind: "blank" }, who: "Dialer", source: null },
       });
     }
     // Oldest first, like a chat: undated (older free-form) notes lead.

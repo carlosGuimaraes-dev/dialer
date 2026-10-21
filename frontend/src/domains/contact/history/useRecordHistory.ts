@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/domains/api/client";
 import type { AdminActivityResponse } from "@/domains/admin/data";
 import { historyRows, type FieldOptions } from "@/domains/activity/historyFormat";
-import type { Contact } from "@/domains/contact/model";
+import { roleLabel, type Contact } from "@/domains/contact/model";
 import { contactObjectName } from "@/domains/twenty/objects";
 
 /** The contact's change history from Twenty, as readable rows. */
@@ -22,7 +22,7 @@ export function useRecordHistory(contact: Contact) {
     staleTime: Infinity,
   });
   const rows = useMemo(
-    () => historyRows(activity.data, meta?.fields ?? {}, contact.type === "lead" ? "Lead" : "Prospect", contact.type),
+    () => historyRows(activity.data, meta?.fields ?? {}, roleLabel(contact.type === "lead" ? "lead" : "prospect"), contact.type),
     [activity.data, meta, contact.type],
   );
   return { rows, isLoading: activity.isLoading, error: activity.error as Error | null };

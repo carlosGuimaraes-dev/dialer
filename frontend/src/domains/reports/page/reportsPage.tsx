@@ -231,7 +231,7 @@ function Overview({ calls, range, goal, threshold }: { calls: ReportCall[]; rang
             label: "Inbound",
             value: String(t.inbound),
             icon: PhoneIncoming,
-            tip: { title: "Inbound", what: "Calls prospects made to you.", formula: ["Calls received", "=", "Inbound"], use: "See how many people call back." },
+            tip: { title: "Inbound", what: "Calls sellers and builders made to you.", formula: ["Calls received", "=", "Inbound"], use: "See how many people call back." },
           },
           {
             label: "Talk time",
@@ -400,7 +400,7 @@ function NumberHealthTab({ calls, threshold }: { calls: ReportCall[]; threshold:
             label: "Bad / wrong",
             value: String(rows.reduce((s, r) => s + r.badOrWrong, 0)),
             icon: Ban,
-            tip: { title: "Bad / wrong", what: "Calls marked as a bad or wrong number.", formula: ["Bad number", "+", "Wrong number"], use: "Clean these leads out of your lists." },
+            tip: { title: "Bad / wrong", what: "Calls marked as a bad or wrong number.", formula: ["Bad number", "+", "Wrong number"], use: "Clean these contacts out of your lists." },
           },
           {
             label: "No answer",
@@ -703,7 +703,7 @@ function DispositionTab({ calls }: { calls: ReportCall[] }) {
             value: String(calls.filter((c) => String(c.status).toUpperCase() === "DNC").length),
             icon: Ban,
             tone: "negative",
-            tip: { title: "Do not contact", what: "Prospects who asked not to be called again." },
+            tip: { title: "Do not contact", what: "Contacts who asked not to be called again." },
           },
           {
             label: selectedLabel,
